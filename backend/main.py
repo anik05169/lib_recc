@@ -79,3 +79,4 @@ def log_activity(user_id: int, book_id: int, action: str):
         "action": action
     })
     return {"status": "logged"}
+#wow
