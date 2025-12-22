@@ -15,14 +15,28 @@ function App() {
     description: "",
   });
 
-  // Load books on page load
+  const [avgRatings, setAvgRatings] = useState({});
+
+  // Load books + ratings on page load
   useEffect(() => {
     loadBooks();
+    loadAverageRatings();
   }, []);
 
   const loadBooks = async () => {
     const res = await getBooks();
     setBooks(res.data);
+  };
+
+  const loadAverageRatings = async () => {
+    const res = await fetch("http://127.0.0.1:8000/ratings/average");
+    const data = await res.json();
+
+    const map = {};
+    data.forEach((r) => {
+      map[r._id] = r.avg_rating.toFixed(1);
+    });
+    setAvgRatings(map);
   };
 
   // Train model
@@ -60,6 +74,7 @@ function App() {
     alert("Book added. Retraining model...");
     await trainModel();
     await loadBooks();
+    await loadAverageRatings();
 
     setNewBook({ book_id: "", title: "", description: "" });
   };
@@ -139,6 +154,35 @@ function App() {
           >
             <strong>{book.title}</strong>
             <p>{book.description}</p>
+
+            {/* ⭐ Average Rating */}
+            {avgRatings[book.book_id] && (
+              <p>⭐ {avgRatings[book.book_id]}</p>
+            )}
+
+            {/* ⭐ Rate Book */}
+            <select
+              onClick={(e) => e.stopPropagation()}
+              onChange={async (e) => {
+                await fetch("http://127.0.0.1:8000/rate", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    user_id: 1,
+                    book_id: book.book_id,
+                    rating: Number(e.target.value),
+                  }),
+                });
+                loadAverageRatings();
+              }}
+            >
+              <option value="">Rate</option>
+              {[1, 2, 3, 4, 5].map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
           </li>
         ))}
       </ul>
@@ -147,3 +191,4 @@ function App() {
 }
 
 export default App;
+

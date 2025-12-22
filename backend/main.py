@@ -12,7 +12,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 from pydantic import BaseModel
 
 class Book(BaseModel):
@@ -80,3 +79,32 @@ def log_activity(user_id: int, book_id: int, action: str):
     })
     return {"status": "logged"}
 #wow
+class Rating(BaseModel):
+    user_id: int
+    book_id: int
+    rating: int  # 1 to 5
+
+@app.post("/rate")
+def rate_book(rating: Rating):
+    db = get_mongo_db()
+
+    if rating.rating < 1 or rating.rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be 1–5")
+
+    db.ratings.update_one(
+        {"user_id": rating.user_id, "book_id": rating.book_id},
+        {"$set": rating.dict()},
+        upsert=True
+    )
+
+    return {"message": "Rating saved"}
+
+@app.get("/ratings/average")
+def average_ratings():
+    db = get_mongo_db()
+
+    pipeline = [
+        {"$group": {"_id": "$book_id", "avg_rating": {"$avg": "$rating"}}}
+    ]
+
+    return list(db.ratings.aggregate(pipeline))
