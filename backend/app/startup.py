@@ -10,3 +10,4 @@ def train_on_startup():
         print("✅ Recommender trained on startup")
     else:
         print("⚠️ No books found, model not trained")
+#
