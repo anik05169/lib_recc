@@ -8,11 +8,19 @@ _similarity = None
 def train_model(books: list):
     global _books_df, _similarity
 
+    print("TRAIN CALLED")
+    print("Number of books:", len(books))
+
     _books_df = pd.DataFrame(books)
+
+    print("Columns:", _books_df.columns)
 
     vectorizer = TfidfVectorizer(stop_words="english")
     tfidf = vectorizer.fit_transform(_books_df["description"])
     _similarity = cosine_similarity(tfidf)
+
+    print("Similarity shape:", _similarity.shape)
+
 
 def recommend(book_id: int, top_n=5):
     if _books_df is None:
