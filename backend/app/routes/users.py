@@ -27,9 +27,12 @@ def add_from_catalog(user_id: int, book_id: int):
 
     return {"message": "Book added to user library"}
 
-
+from fastapi import Body
 @router.post("/add-custom-book")
-def add_custom_book(user_id: int, book: Book):
+def add_custom_book(
+    user_id: int,
+    book: Book = Body(...)
+):
     db = get_mongo_db()
 
     if db.books.find_one({"book_id": book.book_id}):
