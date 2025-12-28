@@ -1,329 +1,349 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import CatalogView from "./views/CatalogView";
+import LibraryView from "./views/LibraryView";
+import Login from "./components/Login";
+import Register from "./components/Register";
 import "./App.css";
 
-const USER_ID = 1;
-
 function App() {
-  const [view, setView] = useState("catalog"); // catalog | library
+  /* ---------------- AUTH STATE ---------------- */
+  const [token, setToken] = useState(null);
+  const [authView, setAuthView] = useState("login"); // "login" or "register"
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  /* ---------------- APP STATE ---------------- */
+  const [view, setView] = useState("catalog");
   const [catalogBooks, setCatalogBooks] = useState([]);
   const [userBooks, setUserBooks] = useState([]);
-  const [searchQuery, setSearchQuery] = useState(""); // New: for search
-
   const [expandedBookId, setExpandedBookId] = useState(null);
-  const [recommendations, setRecommendations] = useState({}); // keyed by book_id
+  const [expandedLibraryBookId, setExpandedLibraryBookId] = useState(null);
+  const [recommendations, setRecommendations] = useState({});
+  const [libraryRecommendations, setLibraryRecommendations] = useState({});
   const [avgRatings, setAvgRatings] = useState({});
+  const [loading, setLoading] = useState({
+    catalog: false,
+    library: false,
+  });
 
+  // NEW BOOK (for My Library)
   const [newBook, setNewBook] = useState({
     book_id: "",
     title: "",
     description: "",
   });
 
-  const [loading, setLoading] = useState({
-    catalog: false,
-    library: false,
-    ratings: false,
-    recommendations: {},
-  }); // New: loading states
+  /* ---------------- AUTH HELPERS ---------------- */
+  const getAuthHeaders = () => {
+    const storedToken = localStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${storedToken || token}`,
+    };
+  };
 
-  const [error, setError] = useState(null); // New: error state
+  const checkAuth = async () => {
+    const storedToken = localStorage.getItem("token");
+    if (!storedToken) {
+      setCheckingAuth(false);
+      return;
+    }
 
-  /* ---------------- LOADERS ---------------- */
+    try {
+      const res = await fetch("http://127.0.0.1:8000/auth/me", {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      });
+
+      if (res.ok) {
+        setToken(storedToken);
+      } else {
+        localStorage.removeItem("token");
+      }
+    } catch (err) {
+      localStorage.removeItem("token");
+    } finally {
+      setCheckingAuth(false);
+    }
+  };
 
   useEffect(() => {
-    loadCatalog();
-    loadUserLibrary();
-    loadAverageRatings();
+    checkAuth();
   }, []);
 
-  const loadCatalog = useCallback(async () => {
-    setLoading(prev => ({ ...prev, catalog: true }));
-    setError(null);
+  const handleLogin = (newToken) => {
+    setToken(newToken);
+    setAuthView("login");
+  };
+
+  const handleRegister = (newToken) => {
+    setToken(newToken);
+    setAuthView("login");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+    setView("catalog");
+  };
+
+  /* ---------------- LOADERS ---------------- */
+  useEffect(() => {
+    if (token) {
+      loadCatalog();
+      loadUserLibrary();
+      loadAverageRatings();
+    }
+  }, [token]);
+
+  const loadCatalog = async () => {
+    setLoading((p) => ({ ...p, catalog: true }));
     try {
       const res = await fetch("http://127.0.0.1:8000/books");
-      if (!res.ok) throw new Error("Failed to load catalog");
       const data = await res.json();
-      setCatalogBooks(Array.isArray(data) ? data : []);
+      setCatalogBooks(data);
     } catch (err) {
-      setError(err.message);
-      console.error(err);
+      console.error("Failed to load catalog:", err);
     } finally {
-      setLoading(prev => ({ ...prev, catalog: false }));
+      setLoading((p) => ({ ...p, catalog: false }));
     }
-  }, []);
+  };
 
-  const loadUserLibrary = useCallback(async () => {
-    setLoading(prev => ({ ...prev, library: true }));
-    setError(null);
+  const loadUserLibrary = async () => {
+    setLoading((p) => ({ ...p, library: true }));
     try {
-      const res = await fetch(`http://127.0.0.1:8000/user/library/${USER_ID}`);
-      if (!res.ok) throw new Error("Failed to load library");
-      const data = await res.json();
-      setUserBooks(Array.isArray(data) ? data : []);
+      const res = await fetch("http://127.0.0.1:8000/user/library", {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserBooks(data);
+      } else if (res.status === 401) {
+        handleLogout();
+      }
     } catch (err) {
-      setError(err.message);
-      console.error(err);
+      console.error("Failed to load library:", err);
     } finally {
-      setLoading(prev => ({ ...prev, library: false }));
+      setLoading((p) => ({ ...p, library: false }));
     }
-  }, []);
+  };
 
-  const loadAverageRatings = useCallback(async () => {
-    setLoading(prev => ({ ...prev, ratings: true }));
-    setError(null);
+  const loadAverageRatings = async () => {
     try {
       const res = await fetch("http://127.0.0.1:8000/ratings/average");
-      if (!res.ok) throw new Error("Failed to load ratings");
       const data = await res.json();
+
       const map = {};
       data.forEach((r) => {
         map[r._id] = r.avg_rating.toFixed(1);
       });
+
       setAvgRatings(map);
     } catch (err) {
-      setError(err.message);
-      console.error(err);
-    } finally {
-      setLoading(prev => ({ ...prev, ratings: false }));
+      console.error("Failed to load ratings:", err);
     }
-  }, []);
+  };
 
   /* ---------------- ACTIONS ---------------- */
 
-  const openBookDetails = useCallback(async (book) => {
-    if (expandedBookId === book.book_id) {
-      setExpandedBookId(null);
-      return;
-    }
+  // Open catalog book + fetch recommendations
+  const openBookDetails = useCallback(
+    async (book) => {
+      if (expandedBookId === book.book_id) {
+        setExpandedBookId(null);
+        return;
+      }
 
-    setExpandedBookId(book.book_id);
-    setLoading(prev => ({ ...prev, recommendations: { ...prev.recommendations, [book.book_id]: true } }));
-    setError(null);
-    try {
-      const res = await fetch(`http://127.0.0.1:8000/recommend/${book.book_id}`);
-      if (!res.ok) throw new Error("Failed to load recommendations");
-      const data = await res.json();
-      setRecommendations((prev) => ({
-        ...prev,
-        [book.book_id]: Array.isArray(data) ? data : [],
-      }));
-    } catch (err) {
-      setError(err.message);
-      console.error(err);
-    } finally {
-      setLoading(prev => ({ ...prev, recommendations: { ...prev.recommendations, [book.book_id]: false } }));
-    }
-  }, [expandedBookId]);
+      setExpandedBookId(book.book_id);
 
-  const addFromCatalog = useCallback(async (book_id) => {
-    setError(null);
+      try {
+        const res = await fetch(
+          `http://127.0.0.1:8000/recommend/${book.book_id}`
+        );
+        const data = await res.json();
+
+        setRecommendations((prev) => ({
+          ...prev,
+          [book.book_id]: data,
+        }));
+      } catch (err) {
+        console.error("Failed to load recommendations:", err);
+      }
+    },
+    [expandedBookId]
+  );
+
+  // Open library book + fetch user-specific recommendations
+  const openLibraryBookDetails = useCallback(
+    async (book) => {
+      if (expandedLibraryBookId === book.book_id) {
+        setExpandedLibraryBookId(null);
+        return;
+      }
+
+      setExpandedLibraryBookId(book.book_id);
+
+      try {
+        const res = await fetch(
+          `http://127.0.0.1:8000/user/recommend/${book.book_id}`,
+          {
+            headers: getAuthHeaders(),
+          }
+        );
+        if (res.ok) {
+          const data = await res.json();
+
+          setLibraryRecommendations((prev) => ({
+            ...prev,
+            [book.book_id]: data,
+          }));
+        } else if (res.status === 401) {
+          handleLogout();
+        }
+      } catch (err) {
+        console.error("Failed to load library recommendations:", err);
+      }
+    },
+    [expandedLibraryBookId]
+  );
+
+  // Add catalog book to user library
+  const addFromCatalog = async (book_id) => {
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/user/add-from-catalog?user_id=${USER_ID}&book_id=${book_id}`,
-        { method: "POST" }
-      );
-      if (!res.ok) throw new Error("Failed to add book");
-      await loadUserLibrary();
-      alert("Book added to your library");
-    } catch (err) {
-      setError(err.message);
-      alert("Error: " + err.message);
-    }
-  }, [loadUserLibrary]);
-
-  const addCustomBook = useCallback(async () => {
-    if (!newBook.book_id.trim() || isNaN(newBook.book_id) || !newBook.title.trim() || !newBook.description.trim()) {
-      alert("Please fill all fields correctly. Book ID must be a number.");
-      return;
-    }
-
-    setError(null);
-    try {
-      const res = await fetch(
-        `http://127.0.0.1:8000/user/add-custom-book?user_id=${USER_ID}`,
+        `http://127.0.0.1:8000/user/add-from-catalog?book_id=${book_id}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            book_id: Number(newBook.book_id),
-            title: newBook.title,
-            description: newBook.description,
-          }),
+          headers: getAuthHeaders(),
         }
       );
-      if (!res.ok) throw new Error("Failed to add custom book");
-      setNewBook({ book_id: "", title: "", description: "" });
-      await loadCatalog();
-      await loadUserLibrary();
-      alert("Book added and model retrained");
+      if (res.ok) {
+        loadUserLibrary();
+      } else if (res.status === 401) {
+        handleLogout();
+      }
     } catch (err) {
-      setError(err.message);
-      alert("Error: " + err.message);
+      console.error("Failed to add book:", err);
     }
-  }, [newBook, loadCatalog, loadUserLibrary]);
+  };
 
-  const rateBook = useCallback(async (book_id, rating) => {
-    if (!rating) return; // Prevent empty rating
-    setError(null);
+  // Rate book
+  const rateBook = async (book_id, rating) => {
     try {
       const res = await fetch("http://127.0.0.1:8000/rate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
-          user_id: USER_ID,
           book_id,
           rating,
         }),
       });
-      if (!res.ok) throw new Error("Failed to rate book");
-      await loadAverageRatings();
+      if (res.ok) {
+        loadAverageRatings();
+      } else if (res.status === 401) {
+        handleLogout();
+      }
     } catch (err) {
-      setError(err.message);
-      alert("Error: " + err.message);
+      console.error("Failed to rate book:", err);
     }
-  }, [loadAverageRatings]);
+  };
 
-  // Filtered books for search
-  const filteredCatalogBooks = useMemo(() => {
-    return catalogBooks.filter(book =>
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [catalogBooks, searchQuery]);
+  // Add custom book
+  const addCustomBook = async () => {
+    const bookId = Number(newBook.book_id);
 
-  const filteredUserBooks = useMemo(() => {
-    return userBooks.filter(book =>
-      book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [userBooks, searchQuery]);
+    if (
+      !bookId ||
+      !newBook.title.trim() ||
+      !newBook.description.trim()
+    ) {
+      alert("Book ID must be a number and all fields are required");
+      return;
+    }
+
+    try {
+      const res = await fetch("http://127.0.0.1:8000/user/add-custom-book", {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          book_id: bookId,
+          title: newBook.title,
+          description: newBook.description,
+        }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          handleLogout();
+          return;
+        }
+        const err = await res.json();
+        console.error(err);
+        alert("Backend rejected request");
+        return;
+      }
+
+      setNewBook({ book_id: "", title: "", description: "" });
+      loadCatalog();
+      loadUserLibrary();
+    } catch (err) {
+      console.error("Failed to add custom book:", err);
+    }
+  };
 
   /* ---------------- UI ---------------- */
 
+  if (checkingAuth) {
+    return (
+      <div className="container">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!token) {
+    return authView === "login" ? (
+      <Login onLogin={handleLogin} switchToRegister={() => setAuthView("register")} />
+    ) : (
+      <Register onRegister={handleRegister} switchToLogin={() => setAuthView("login")} />
+    );
+  }
+
   return (
     <div className="container">
-      <h1>Personal Library</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <h1>Personal Library</h1>
+        <button onClick={handleLogout} style={{ padding: "8px 16px", cursor: "pointer" }}>
+          Logout
+        </button>
+      </div>
 
-      {error && <p style={{ color: "red" }}>Error: {error}</p>}
-
-      {/* NAV */}
-      <button onClick={() => setView("catalog")}>Browse Catalog</button>
+      <button onClick={() => setView("catalog")}>Catalog</button>
       <button onClick={() => setView("library")}>My Library</button>
 
-      {/* SEARCH */}
-      <input
-        type="text"
-        placeholder="Search books..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        style={{ margin: "10px 0", padding: "5px", width: "100%" }}
-      />
-
-      {/* ---------------- CATALOG ---------------- */}
       {view === "catalog" && (
-        <>
-          <h2>Catalog</h2>
-          {loading.catalog && <p>Loading catalog...</p>}
-          <ul className="book-list">
-            {filteredCatalogBooks.map((book) => (
-              <li key={book.book_id}>
-                <strong>{book.title}</strong>
-                <p>{book.description}</p>
-
-                <button onClick={() => openBookDetails(book)}>
-                  {expandedBookId === book.book_id
-                    ? "Hide Details"
-                    : "View Details"}
-                </button>
-                <button onClick={() => addFromCatalog(book.book_id)}>
-                  Add to My Library
-                </button>
-
-                {/* INLINE DETAILS */}
-                {expandedBookId === book.book_id && (
-                  <div className="recommendation-box">
-                    <h4>Related Books</h4>
-                    {loading.recommendations[book.book_id] && <p>Loading recommendations...</p>}
-                    {recommendations[book.book_id]?.length === 0 ? (
-                      <p>No related books found.</p>
-                    ) : (
-                      <ul className="recommend-list">
-                        {recommendations[book.book_id]?.map((b) => (
-                          <li key={b.book_id}>
-                            <strong>{b.title}</strong>
-                            <p>{b.description}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </>
+        <CatalogView
+          books={catalogBooks}
+          loading={loading.catalog}
+          expandedBookId={expandedBookId}
+          recommendations={recommendations}
+          openBookDetails={openBookDetails}
+          addFromCatalog={addFromCatalog}
+        />
       )}
 
-      {/* ---------------- MY LIBRARY ---------------- */}
       {view === "library" && (
-        <>
-          <h2>My Library</h2>
-          {loading.library && <p>Loading library...</p>}
-
-          {/* ADD CUSTOM BOOK */}
-          <h3>Add Your Own Book</h3>
-          <input
-            placeholder="Book ID (number)"
-            value={newBook.book_id}
-            onChange={(e) =>
-              setNewBook({ ...newBook, book_id: e.target.value })
-            }
-          />
-          <input
-            placeholder="Title"
-            value={newBook.title}
-            onChange={(e) =>
-              setNewBook({ ...newBook, title: e.target.value })
-            }
-          />
-          <textarea
-            placeholder="Description"
-            value={newBook.description}
-            onChange={(e) =>
-              setNewBook({ ...newBook, description: e.target.value })
-            }
-          />
-          <button onClick={addCustomBook}>Add Book</button>
-
-          <ul className="book-list">
-            {filteredUserBooks.map((book) => (
-              <li key={book.book_id}>
-                <strong>{book.title}</strong>
-                <p>{book.description}</p>
-
-                {avgRatings[book.book_id] && (
-                  <p>⭐ {avgRatings[book.book_id]}</p>
-                )}
-
-                <select
-                  value={book.currentRating || ""} // Track current rating
-                  onChange={(e) => {
-                    const rating = Number(e.target.value);
-                    setUserBooks(prev => prev.map(b => b.book_id === book.book_id ? { ...b, currentRating: rating } : b));
-                    rateBook(book.book_id, rating);
-                  }}
-                >
-                  <option value="">Rate</option>
-                  {[1, 2, 3, 4, 5].map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </li>
-            ))}
-          </ul>
-        </>
+        <LibraryView
+          books={userBooks}
+          loading={loading.library}
+          avgRatings={avgRatings}
+          rateBook={rateBook}
+          setUserBooks={setUserBooks}
+          newBook={newBook}
+          setNewBook={setNewBook}
+          addCustomBook={addCustomBook}
+          expandedBookId={expandedLibraryBookId}
+          recommendations={libraryRecommendations}
+          openBookDetails={openLibraryBookDetails}
+        />
       )}
     </div>
   );

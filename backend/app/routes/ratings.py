@@ -1,25 +1,32 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends, Body
 from app.db.mongo import get_mongo_db
 from app.models.schemas import Rating
+from app.core.auth import get_current_user
 
 router = APIRouter(prefix="", tags=["Ratings"])
 
 @router.post("/rate")
-def rate_book(rating: Rating):
-    if rating.rating < 1 or rating.rating > 5:
+def rate_book(
+    book_id: int = Body(...),
+    rating: int = Body(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Rate a book (1-5)."""
+    if rating < 1 or rating > 5:
         raise HTTPException(400, "Rating must be between 1 and 5")
 
     db = get_mongo_db()
+    user_id = str(current_user["_id"])
 
     exists = db.user_books.find_one(
-        {"user_id": rating.user_id, "book_id": rating.book_id}
+        {"user_id": user_id, "book_id": book_id}
     )
     if not exists:
         raise HTTPException(400, "Book not in user library")
 
     db.ratings.update_one(
-        {"user_id": rating.user_id, "book_id": rating.book_id},
-        {"$set": rating.dict()},
+        {"user_id": user_id, "book_id": book_id},
+        {"$set": {"user_id": user_id, "book_id": book_id, "rating": rating}},
         upsert=True,
     )
 

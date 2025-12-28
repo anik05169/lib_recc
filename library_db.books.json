@@ -1,0 +1,440 @@
+[{
+  "_id": {
+    "$oid": "6947d28ce4e9b2d655a96b01"
+  },
+  "book_id": 1,
+  "title": "Harry Potter",
+  "description": "A young wizard discovers magic and friendship"
+},
+{
+  "_id": {
+    "$oid": "6947d2a2e4e9b2d655a96b03"
+  },
+  "book_id": 2,
+  "title": "The Hobbit",
+  "description": "A hobbit goes on an unexpected adventure with dwarves"
+},
+{
+  "_id": {
+    "$oid": "6947d2ace4e9b2d655a96b05"
+  },
+  "book_id": 3,
+  "title": "Dune",
+  "description": "Political intrigue and power struggles on a desert planet"
+},
+{
+  "_id": {
+    "$oid": "6947dca1e4e9b2d655a96b0d"
+  },
+  "book_id": 4,
+  "title": "1984",
+  "description": "A dystopian society under constant surveillance and authoritarian control."
+},
+{
+  "_id": {
+    "$oid": "6947dca1e4e9b2d655a96b0e"
+  },
+  "book_id": 5,
+  "title": "The Alchemist",
+  "description": "A shepherd travels in search of destiny and the meaning of life."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b10"
+  },
+  "book_id": 6,
+  "title": "Foundation",
+  "description": "A mathematician develops a science to predict the fall of empires."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b11"
+  },
+  "book_id": 7,
+  "title": "The Blind Side",
+  "description": "The true story of a homeless boy who becomes an NFL star."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b12"
+  },
+  "book_id": 8,
+  "title": "The Republic",
+  "description": "Plato's foundational work on education, justice, and the ideal state."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b13"
+  },
+  "book_id": 9,
+  "title": "Neuromancer",
+  "description": "A washed-up computer hacker is hired for one last job in the sprawl."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b14"
+  },
+  "book_id": 10,
+  "title": "Moneyball",
+  "description": "How data and statistics revolutionized the game of baseball."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b15"
+  },
+  "book_id": 11,
+  "title": "The Left Hand of Darkness",
+  "description": "A human envoy visits a planet where inhabitants have no fixed gender."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b16"
+  },
+  "book_id": 12,
+  "title": "Pedagogy of the Oppressed",
+  "description": "A seminal text on the role of education in social liberation."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b17"
+  },
+  "book_id": 13,
+  "title": "Snow Crash",
+  "description": "A delivery driver in a future Los Angeles navigates the Metaverse."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b18"
+  },
+  "book_id": 14,
+  "title": "Shoe Dog",
+  "description": "A memoir by the creator of Nike about building a global empire."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b19"
+  },
+  "book_id": 15,
+  "title": "Ender's Game",
+  "description": "A young boy is trained through games to lead a war against aliens."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b1a"
+  },
+  "book_id": 16,
+  "title": "Mindset",
+  "description": "How the psychology of success impacts learning and achievement."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b1b"
+  },
+  "book_id": 17,
+  "title": "The Martian",
+  "description": "An astronaut is stranded on Mars and must use science to survive."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b1c"
+  },
+  "book_id": 18,
+  "title": "Open",
+  "description": "The raw and honest autobiography of tennis legend Andre Agassi."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b1d"
+  },
+  "book_id": 19,
+  "title": "Hyperion",
+  "description": "Seven pilgrims travel to the Time Tombs on a world at the brink of war."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b1e"
+  },
+  "book_id": 20,
+  "title": "Dumbing Us Down",
+  "description": "An exploration of the hidden curriculum of compulsory schooling."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b1f"
+  },
+  "book_id": 21,
+  "title": "Brave New World",
+  "description": "A future society engineered for stability at the cost of freedom."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b20"
+  },
+  "book_id": 22,
+  "title": "The Mamba Mentality",
+  "description": "Kobe Bryant's personal perspective on his approach to basketball."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b21"
+  },
+  "book_id": 23,
+  "title": "The Three-Body Problem",
+  "description": "A secret military project sends signals into space during the Cultural Revolution."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b22"
+  },
+  "book_id": 24,
+  "title": "The Smartest Kids in the World",
+  "description": "An investigation into how some nations build world-class education systems."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b23"
+  },
+  "book_id": 25,
+  "title": "Project Hail Mary",
+  "description": "A lone survivor on a spaceship must save Earth from an extinction event."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b24"
+  },
+  "book_id": 26,
+  "title": "Barbarian Days",
+  "description": "A surfing life captured through a memoir of obsession and travel."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b25"
+  },
+  "book_id": 27,
+  "title": "Make It Stick",
+  "description": "The science of successful learning and memory retention."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b26"
+  },
+  "book_id": 28,
+  "title": "The Hitchhiker's Guide to the Galaxy",
+  "description": "A comedy about the last surviving human after Earth is destroyed."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b27"
+  },
+  "book_id": 29,
+  "title": "Friday Night Lights",
+  "description": "The intense world of high school football in a small Texas town."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b28"
+  },
+  "book_id": 30,
+  "title": "Starship Troopers",
+  "description": "A young soldier rises through the ranks in an interstellar war."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b29"
+  },
+  "book_id": 31,
+  "title": "How Children Succeed",
+  "description": "Why grit, curiosity, and character matter more than IQ."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b2a"
+  },
+  "book_id": 32,
+  "title": "The Expanse: Leviathan Wakes",
+  "description": "A conspiracy threatens the fragile peace of the solar system."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b2b"
+  },
+  "book_id": 33,
+  "title": "Into Thin Air",
+  "description": "A harrowing account of a disastrous season on Mount Everest."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b2c"
+  },
+  "book_id": 34,
+  "title": "Educated",
+  "description": "A woman leaves her survivalist family to pursue academic excellence."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b2d"
+  },
+  "book_id": 35,
+  "title": "Do Androids Dream of Electric Sheep?",
+  "description": "A bounty hunter tracks down escaped nexus-6 androids."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b2e"
+  },
+  "book_id": 36,
+  "title": "Seveneves",
+  "description": "Humanity races to survive after the moon suddenly explodes."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b2f"
+  },
+  "book_id": 37,
+  "title": "The Boys in the Boat",
+  "description": "The quest for gold by the American rowing team at the 1936 Olympics."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b30"
+  },
+  "book_id": 38,
+  "title": "The Courage to Teach",
+  "description": "Exploring the inner landscape of a teacher's life."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b31"
+  },
+  "book_id": 39,
+  "title": "Ready Player One",
+  "description": "A teen searches for an Easter egg in a massive virtual reality world."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b32"
+  },
+  "book_id": 40,
+  "title": "The Art of Fielding",
+  "description": "A baseball star's life changes after a single disastrous play."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b33"
+  },
+  "book_id": 41,
+  "title": "Scythe",
+  "description": "In a world without death, two teens must learn the art of killing."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b34"
+  },
+  "book_id": 42,
+  "title": "The Element",
+  "description": "Finding your passion and how it changes everything in education."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b35"
+  },
+  "book_id": 43,
+  "title": "Red Rising",
+  "description": "A miner infiltrates the elite class to bring down a color-coded caste system."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b36"
+  },
+  "book_id": 44,
+  "title": "The Damned Utd",
+  "description": "A fictionalized look at Brian Clough's 44 days at Leeds United."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b37"
+  },
+  "book_id": 45,
+  "title": "Grit",
+  "description": "The power of passion and perseverance in learning and life."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b38"
+  },
+  "book_id": 46,
+  "title": "Solaris",
+  "description": "Scientists on a space station study an ocean that mimics human thought."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b39"
+  },
+  "book_id": 47,
+  "title": "Endure",
+  "description": "The science and psychology of the limits of human performance."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b3a"
+  },
+  "book_id": 48,
+  "title": "A Canticle for Leibowitz",
+  "description": "Monks preserve scientific knowledge after a nuclear apocalypse."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b3b"
+  },
+  "book_id": 49,
+  "title": "The First 20 Hours",
+  "description": "How to learn anything quickly through deliberate practice."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b3c"
+  },
+  "book_id": 50,
+  "title": "The Forever War",
+  "description": "A soldier deals with time dilation during a centuries-long space war."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b3d"
+  },
+  "book_id": 51,
+  "title": "The Power of One",
+  "description": "A young boy uses boxing to survive and thrive in South Africa."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b3e"
+  },
+  "book_id": 52,
+  "title": "Children of Time",
+  "description": "The remnants of humanity encounter a planet of uplifted spiders."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b3f"
+  },
+  "book_id": 53,
+  "title": "Range",
+  "description": "Why generalists triumph in a specialized world of education."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b40"
+  },
+  "book_id": 54,
+  "title": "Dark Matter",
+  "description": "A physics professor is kidnapped into an alternate version of his life."
+},
+{
+  "_id": {
+    "$oid": "6947dd1be4e9b2d655a96b41"
+  },
+  "book_id": 55,
+  "title": "Playing for Keeps",
+  "description": "The definitive biography of Michael Jordan's basketball career."
+}]

@@ -198,3 +198,19 @@ p[style*="color: red"] {
   }
 }
 
+.book-card {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.book-cover {
+  width: 90px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.book-content {
+  flex: 1;
+}
