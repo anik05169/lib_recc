@@ -214,3 +214,54 @@ p[style*="color: red"] {
 .book-content {
   flex: 1;
 }
+
+/* ---------- AI SUGGESTION BOX ---------- */
+
+.ai-suggest-box {
+  margin: 16px 0 24px 0;
+  padding: 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.ai-suggest-box textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  resize: vertical;
+  outline: none;
+}
+
+.ai-suggest-box textarea:focus {
+  border-color: #4a90e2;
+}
+
+.ai-suggest-box button {
+  margin-top: 10px;
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: none;
+  background-color: #4a90e2;
+  color: white;
+  cursor: pointer;
+}
+
+.ai-suggest-box button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+/* ---------- AI RESULTS ---------- */
+
+.ai-results {
+  margin-bottom: 24px;
+}
+
+.ai-results h4 {
+  margin-bottom: 10px;
+}
