@@ -247,47 +247,56 @@ function App() {
   };
 
   // Add custom book
-  const addCustomBook = async () => {
-    const bookId = Number(newBook.book_id);
+const addCustomBook = async () => {
+  const bookId = Number(newBook.book_id);
 
-    if (
-      !bookId ||
-      !newBook.title.trim() ||
-      !newBook.description.trim()
-    ) {
-      alert("Book ID must be a number and all fields are required");
+  if (
+    !bookId ||
+    !newBook.title?.trim() ||
+    !newBook.description?.trim()
+  ) {
+    alert("Book ID must be a number and all fields are required");
+    return;
+  }
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/user/add-custom-book", {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        book_id: bookId,
+        title: newBook.title,
+        description: newBook.description,
+        image_url: newBook.image_url || "/placeholder.jpg", // 🔥 FIX
+      }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 401) {
+        handleLogout();
+        return;
+      }
+      const err = await res.json();
+      console.error(err);
+      alert("Backend rejected request");
       return;
     }
 
-    try {
-      const res = await fetch("http://127.0.0.1:8000/user/add-custom-book", {
-        method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          book_id: bookId,
-          title: newBook.title,
-          description: newBook.description,
-        }),
-      });
+    // reset (keep image_url out)
+    setNewBook({
+      book_id: "",
+      title: "",
+      description: "",
+      image_url: "",
+    });
 
-      if (!res.ok) {
-        if (res.status === 401) {
-          handleLogout();
-          return;
-        }
-        const err = await res.json();
-        console.error(err);
-        alert("Backend rejected request");
-        return;
-      }
+    loadCatalog();
+    loadUserLibrary();
+  } catch (err) {
+    console.error("Failed to add custom book:", err);
+  }
+};
 
-      setNewBook({ book_id: "", title: "", description: "" });
-      loadCatalog();
-      loadUserLibrary();
-    } catch (err) {
-      console.error("Failed to add custom book:", err);
-    }
-  };
 
   /* ---------------- UI ---------------- */
 
@@ -350,3 +359,4 @@ function App() {
 }
 
 export default App;
+

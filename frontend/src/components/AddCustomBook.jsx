@@ -1,3 +1,5 @@
+// AddCustomBook.jsx
+
 export default function AddCustomBook({ newBook, setNewBook, addCustomBook }) {
   return (
     <>
@@ -6,7 +8,7 @@ export default function AddCustomBook({ newBook, setNewBook, addCustomBook }) {
       <div className="add-book-form">
         <input
           placeholder="Book ID (number)"
-          value={newBook.book_id}
+          value={newBook.book_id || ""}
           onChange={(e) =>
             setNewBook({ ...newBook, book_id: e.target.value })
           }
@@ -14,7 +16,7 @@ export default function AddCustomBook({ newBook, setNewBook, addCustomBook }) {
 
         <input
           placeholder="Title"
-          value={newBook.title}
+          value={newBook.title || ""}
           onChange={(e) =>
             setNewBook({ ...newBook, title: e.target.value })
           }
@@ -22,9 +24,18 @@ export default function AddCustomBook({ newBook, setNewBook, addCustomBook }) {
 
         <textarea
           placeholder="Description"
-          value={newBook.description}
+          value={newBook.description || ""}
           onChange={(e) =>
             setNewBook({ ...newBook, description: e.target.value })
+          }
+        />
+
+        {/* 🔥 ADD THIS INPUT */}
+        <input
+          placeholder="Image URL (optional)"
+          value={newBook.image_url || ""}
+          onChange={(e) =>
+            setNewBook({ ...newBook, image_url: e.target.value })
           }
         />
 

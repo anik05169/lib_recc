@@ -1,3 +1,5 @@
+#books.py
+
 from fastapi import APIRouter
 from app.db.mongo import get_mongo_db
 from app.services.recommender import recommend
@@ -9,6 +11,15 @@ router = APIRouter(prefix="", tags=["Books"])
 def get_books():
     db = get_mongo_db()
     return list(db.books.find({}, {"_id": 0}))
+
+@router.post("/books")
+def add_book(book: dict):
+    db = get_mongo_db()
+
+    book.setdefault("image_url", "/placeholder.jpg")
+    db.books.insert_one(book)
+
+    return {"status": "ok"}
 
 
 @router.get("/recommend/{book_id}")
@@ -56,4 +67,5 @@ from app.services.hf_recommender import recommend_books_hf
 @router.post("/books/ai-suggest-new")
 def ai_suggest_new_books(payload: dict):
     description = payload["description"]
-    return {"recommendations": recommend_books_hf(description)}
+    return recommend_books_hf(description)
+

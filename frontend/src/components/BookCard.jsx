@@ -1,3 +1,5 @@
+//BookCard.jsx
+
 export default function BookCard({ book, children, showDescription }) {
   return (
     <li className="book-card">

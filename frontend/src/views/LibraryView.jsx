@@ -1,3 +1,5 @@
+// LibraryView.jsx
+
 import AiBookSuggest from "../components/AiBookSuggest";
 import AddCustomBook from "../components/AddCustomBook";
 import UserLibrary from "../components/UserLibrary";
@@ -15,7 +17,11 @@ export default function LibraryView(props) {
     <>
       <h2>My Library</h2>
 
-      <AiBookSuggest />
+      <AiBookSuggest
+  setNewBook={setNewBook}
+  addCustomBook={addCustomBook}
+/>
+
 
       <AddCustomBook
         newBook={newBook}
