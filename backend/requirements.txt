@@ -1,18 +1,18 @@
-fastapi==0.111.0
-uvicorn==0.24.0
-gunicorn==21.2.0
+fastapi
+uvicorn
+gunicorn
 
-pymongo==4.6.0
+pymongo
 
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-python-multipart==0.0.9
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
 
-pydantic==2.8.2
-pydantic-settings==2.3.4
-python-dotenv==1.0.0
+pydantic
+pydantic-settings
+python-dotenv
 
-pandas==2.0.3
+pandas
 
 
 
