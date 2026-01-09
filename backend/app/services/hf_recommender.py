@@ -3,6 +3,8 @@ import os
 import requests
 
 HF_API_KEY = os.getenv("HF_API_KEY")
+print("HF_API_KEY prefix:", HF_API_KEY[:6] if HF_API_KEY else None)
+
 
 API_URL = "https://router.huggingface.co/v1/chat/completions"
 
