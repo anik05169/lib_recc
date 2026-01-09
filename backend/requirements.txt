@@ -14,9 +14,7 @@ python-dotenv
 
 pandas
 requests
-scikit-learn
 
-email-validator
 
 langchain
 langchain-community
