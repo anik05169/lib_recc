@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_URL } from "../config";
 import "./Login.css";
 
 function Register({ onRegister, switchToLogin }) {
@@ -14,7 +15,7 @@ function Register({ onRegister, switchToLogin }) {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/auth/register", {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
@@ -27,7 +28,7 @@ function Register({ onRegister, switchToLogin }) {
 
       const data = await response.json();
       // After registration, automatically log in
-      const loginResponse = await fetch("http://127.0.0.1:8000/auth/login", {
+      const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

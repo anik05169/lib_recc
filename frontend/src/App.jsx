@@ -3,6 +3,7 @@ import CatalogView from "./views/CatalogView";
 import LibraryView from "./views/LibraryView";
 import Login from "./components/Login";
 import Register from "./components/Register";
+import { API_BASE_URL } from "./config";
 import "./App.css";
 
 function App() {
@@ -49,7 +50,7 @@ function App() {
     }
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/auth/me", {
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
 
@@ -97,7 +98,7 @@ function App() {
   const loadCatalog = async () => {
     setLoading((p) => ({ ...p, catalog: true }));
     try {
-      const res = await fetch("http://127.0.0.1:8000/books");
+      const res = await fetch(`${API_BASE_URL}/books`);
       const data = await res.json();
       setCatalogBooks(data);
     } catch (err) {
@@ -110,7 +111,7 @@ function App() {
   const loadUserLibrary = async () => {
     setLoading((p) => ({ ...p, library: true }));
     try {
-      const res = await fetch("http://127.0.0.1:8000/user/library", {
+      const res = await fetch(`${API_BASE_URL}/user/library`, {
         headers: getAuthHeaders(),
       });
       if (res.ok) {
@@ -128,7 +129,7 @@ function App() {
 
   const loadAverageRatings = async () => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/ratings/average");
+      const res = await fetch(`${API_BASE_URL}/ratings/average`);
       const data = await res.json();
 
       const map = {};
@@ -156,7 +157,7 @@ function App() {
 
       try {
         const res = await fetch(
-          `http://127.0.0.1:8000/recommend/${book.book_id}`
+          `${API_BASE_URL}/recommend/${book.book_id}`
         );
         const data = await res.json();
 
@@ -183,7 +184,7 @@ function App() {
 
       try {
         const res = await fetch(
-          `http://127.0.0.1:8000/user/recommend/${book.book_id}`,
+          `${API_BASE_URL}/user/recommend/${book.book_id}`,
           {
             headers: getAuthHeaders(),
           }
@@ -209,7 +210,7 @@ function App() {
   const addFromCatalog = async (book_id) => {
     try {
       const res = await fetch(
-        `http://127.0.0.1:8000/user/add-from-catalog?book_id=${book_id}`,
+        `${API_BASE_URL}/user/add-from-catalog?book_id=${book_id}`,
         {
           method: "POST",
           headers: getAuthHeaders(),
@@ -228,7 +229,7 @@ function App() {
   // Rate book
   const rateBook = async (book_id, rating) => {
     try {
-      const res = await fetch("http://127.0.0.1:8000/rate", {
+      const res = await fetch(`${API_BASE_URL}/rate`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -260,7 +261,7 @@ const addCustomBook = async () => {
   }
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/user/add-custom-book", {
+    const res = await fetch(`${API_BASE_URL}/user/add-custom-book`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify({
