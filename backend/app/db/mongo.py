@@ -1,15 +1,12 @@
 import os
 from pymongo import MongoClient
+from dotenv import load_dotenv
 
-MONGODB_URI = os.getenv("MONGODB_URI")
+load_dotenv()
 
-if not MONGODB_URI:
-    raise RuntimeError("MONGODB_URI environment variable is not set")
-
-client = MongoClient(MONGODB_URI)
-
-# Uses the database name from the URI
-db = client.get_default_database()
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+client = MongoClient(MONGO_URI)
+db = client["library_db"]
 
 def get_mongo_db():
     return db

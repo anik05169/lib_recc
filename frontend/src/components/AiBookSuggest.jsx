@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { API_BASE_URL } from "../config";
 import BookCard from "./BookCard";
 
 /* ------------------ Helpers ------------------ */
@@ -49,7 +48,7 @@ const handleAddToLibrary = (book) => {
     setAiSuggestions([]);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/books/ai-suggest-new`, {
+      const res = await fetch("http://localhost:8000/books/ai-suggest-new", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: aiQuery }),

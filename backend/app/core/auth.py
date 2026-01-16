@@ -7,8 +7,10 @@ from fastapi.security import OAuth2PasswordBearer
 from app.db.mongo import get_mongo_db
 from bson import ObjectId
 
+import os
+
 # Security settings
-SECRET_KEY = "your-secret-key-change-this-in-production"  # Change this in production!
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-this-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 

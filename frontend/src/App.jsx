@@ -3,8 +3,10 @@ import CatalogView from "./views/CatalogView";
 import LibraryView from "./views/LibraryView";
 import Login from "./components/Login";
 import Register from "./components/Register";
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL } from "./api";
 import "./App.css";
+
+const BASE_URL = API_BASE_URL.replace(/\/$/, "");
 
 function App() {
   /* ---------------- AUTH STATE ---------------- */
@@ -50,7 +52,7 @@ function App() {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      const res = await fetch(`${BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
 
@@ -98,7 +100,7 @@ function App() {
   const loadCatalog = async () => {
     setLoading((p) => ({ ...p, catalog: true }));
     try {
-      const res = await fetch(`${API_BASE_URL}/books`);
+      const res = await fetch(`${BASE_URL}/books`);
       const data = await res.json();
       setCatalogBooks(data);
     } catch (err) {
@@ -111,7 +113,7 @@ function App() {
   const loadUserLibrary = async () => {
     setLoading((p) => ({ ...p, library: true }));
     try {
-      const res = await fetch(`${API_BASE_URL}/user/library`, {
+      const res = await fetch(`${BASE_URL}/user/library`, {
         headers: getAuthHeaders(),
       });
       if (res.ok) {
@@ -129,7 +131,7 @@ function App() {
 
   const loadAverageRatings = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/ratings/average`);
+      const res = await fetch(`${BASE_URL}/ratings/average`);
       const data = await res.json();
 
       const map = {};
@@ -157,7 +159,7 @@ function App() {
 
       try {
         const res = await fetch(
-          `${API_BASE_URL}/recommend/${book.book_id}`
+          `${BASE_URL}/recommend/${book.book_id}`
         );
         const data = await res.json();
 
@@ -184,7 +186,7 @@ function App() {
 
       try {
         const res = await fetch(
-          `${API_BASE_URL}/user/recommend/${book.book_id}`,
+          `${BASE_URL}/user/recommend/${book.book_id}`,
           {
             headers: getAuthHeaders(),
           }
@@ -210,7 +212,7 @@ function App() {
   const addFromCatalog = async (book_id) => {
     try {
       const res = await fetch(
-        `${API_BASE_URL}/user/add-from-catalog?book_id=${book_id}`,
+        `${BASE_URL}/user/add-from-catalog?book_id=${book_id}`,
         {
           method: "POST",
           headers: getAuthHeaders(),
@@ -229,7 +231,7 @@ function App() {
   // Rate book
   const rateBook = async (book_id, rating) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/rate`, {
+      const res = await fetch(`${BASE_URL}/rate`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -248,55 +250,55 @@ function App() {
   };
 
   // Add custom book
-const addCustomBook = async () => {
-  const bookId = Number(newBook.book_id);
+  const addCustomBook = async () => {
+    const bookId = Number(newBook.book_id);
 
-  if (
-    !bookId ||
-    !newBook.title?.trim() ||
-    !newBook.description?.trim()
-  ) {
-    alert("Book ID must be a number and all fields are required");
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_BASE_URL}/user/add-custom-book`, {
-      method: "POST",
-      headers: getAuthHeaders(),
-      body: JSON.stringify({
-        book_id: bookId,
-        title: newBook.title,
-        description: newBook.description,
-        image_url: newBook.image_url || "/placeholder.jpg", // 🔥 FIX
-      }),
-    });
-
-    if (!res.ok) {
-      if (res.status === 401) {
-        handleLogout();
-        return;
-      }
-      const err = await res.json();
-      console.error(err);
-      alert("Backend rejected request");
+    if (
+      !bookId ||
+      !newBook.title?.trim() ||
+      !newBook.description?.trim()
+    ) {
+      alert("Book ID must be a number and all fields are required");
       return;
     }
 
-    // reset (keep image_url out)
-    setNewBook({
-      book_id: "",
-      title: "",
-      description: "",
-      image_url: "",
-    });
+    try {
+      const res = await fetch(`${BASE_URL}/user/add-custom-book`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          book_id: bookId,
+          title: newBook.title,
+          description: newBook.description,
+          image_url: newBook.image_url || "/placeholder.jpg", // 🔥 FIX
+        }),
+      });
 
-    loadCatalog();
-    loadUserLibrary();
-  } catch (err) {
-    console.error("Failed to add custom book:", err);
-  }
-};
+      if (!res.ok) {
+        if (res.status === 401) {
+          handleLogout();
+          return;
+        }
+        const err = await res.json();
+        console.error(err);
+        alert("Backend rejected request");
+        return;
+      }
+
+      // reset (keep image_url out)
+      setNewBook({
+        book_id: "",
+        title: "",
+        description: "",
+        image_url: "",
+      });
+
+      loadCatalog();
+      loadUserLibrary();
+    } catch (err) {
+      console.error("Failed to add custom book:", err);
+    }
+  };
 
 
   /* ---------------- UI ---------------- */

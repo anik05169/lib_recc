@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL } from "../api";
 import "./Login.css";
 
 function Login({ onLogin, switchToRegister }) {
@@ -14,7 +14,7 @@ function Login({ onLogin, switchToRegister }) {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
