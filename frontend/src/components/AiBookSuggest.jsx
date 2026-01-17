@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_URL } from "../api";
 import BookCard from "./BookCard";
 
 /* ------------------ Helpers ------------------ */
@@ -28,16 +29,16 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
 
-const handleAddToLibrary = (book) => {
-  setNewBook({
-    book_id: Date.now() % 1000000,
-    title: book.title,
-    description: book.description,
-    image_url: book.image_url || "/placeholder.jpg",
-  });
+  const handleAddToLibrary = (book) => {
+    setNewBook({
+      book_id: Date.now() % 1000000,
+      title: book.title,
+      description: book.description,
+      image_url: book.image_url || "/placeholder.jpg",
+    });
 
-  addCustomBook(); // 🔥 reuse existing logic
-};
+    addCustomBook(); // 🔥 reuse existing logic
+  };
 
 
 
@@ -48,7 +49,7 @@ const handleAddToLibrary = (book) => {
     setAiSuggestions([]);
 
     try {
-      const res = await fetch("http://localhost:8000/books/ai-suggest-new", {
+      const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/books/ai-suggest-new`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: aiQuery }),
