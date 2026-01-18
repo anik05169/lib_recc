@@ -26,17 +26,21 @@ export default function CatalogView({
             book={book}
             showDescription={expandedBookId === book.book_id}
           >
-            <button onClick={() => openBookDetails(book)}>
+            <button
+              className="btn-secondary"
+              onClick={() => openBookDetails(book)}
+            >
               {expandedBookId === book.book_id
-                ? "Hide Details"
-                : "View Details"}
+                ? "Hide Recommendations"
+                : "Similar Books"}
             </button>
 
             <button onClick={() => addFromCatalog(book.book_id)}>
-              Add to My Library
+              Collect Book
             </button>
 
-            {/* ✅ Recommendations MUST be inside this book */}
+
+            {/* Recommendations MUST be inside this book */}
             {expandedBookId === book.book_id && (
               <div className="recommendation-box">
                 <h4>Related Books</h4>

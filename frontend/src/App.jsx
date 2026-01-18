@@ -250,13 +250,14 @@ function App() {
   };
 
   // Add custom book
-  const addCustomBook = async () => {
-    const bookId = Number(newBook.book_id);
+  const addCustomBook = async (bookToUse = null) => {
+    const data = bookToUse || newBook;
+    const bookId = Number(data.book_id);
 
     if (
       !bookId ||
-      !newBook.title?.trim() ||
-      !newBook.description?.trim()
+      !data.title?.trim() ||
+      !data.description?.trim()
     ) {
       alert("Book ID must be a number and all fields are required");
       return;
@@ -268,9 +269,9 @@ function App() {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           book_id: bookId,
-          title: newBook.title,
-          description: newBook.description,
-          image_url: newBook.image_url || "/placeholder.jpg", // 🔥 FIX
+          title: data.title,
+          description: data.description,
+          image_url: data.image_url || "/placeholder.jpg",
         }),
       });
 
@@ -285,7 +286,7 @@ function App() {
         return;
       }
 
-      // reset (keep image_url out)
+      // reset
       setNewBook({
         book_id: "",
         title: "",
@@ -321,42 +322,56 @@ function App() {
 
   return (
     <div className="container">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-        <h1>Personal Library</h1>
-        <button onClick={handleLogout} style={{ padding: "8px 16px", cursor: "pointer" }}>
+      <header className="header-section">
+        <h1>Library AI</h1>
+        <button onClick={handleLogout} className="btn-logout btn-secondary">
           Logout
+        </button>
+      </header>
+
+      <div className="nav-tabs">
+        <button
+          className={view === "catalog" ? "active" : ""}
+          onClick={() => setView("catalog")}
+        >
+          Explore Catalog
+        </button>
+        <button
+          className={view === "library" ? "active" : ""}
+          onClick={() => setView("library")}
+        >
+          My Collection
         </button>
       </div>
 
-      <button onClick={() => setView("catalog")}>Catalog</button>
-      <button onClick={() => setView("library")}>My Library</button>
+      <main className="content-area">
+        {view === "catalog" && (
+          <CatalogView
+            books={catalogBooks}
+            loading={loading.catalog}
+            expandedBookId={expandedBookId}
+            recommendations={recommendations}
+            openBookDetails={openBookDetails}
+            addFromCatalog={addFromCatalog}
+          />
+        )}
 
-      {view === "catalog" && (
-        <CatalogView
-          books={catalogBooks}
-          loading={loading.catalog}
-          expandedBookId={expandedBookId}
-          recommendations={recommendations}
-          openBookDetails={openBookDetails}
-          addFromCatalog={addFromCatalog}
-        />
-      )}
-
-      {view === "library" && (
-        <LibraryView
-          books={userBooks}
-          loading={loading.library}
-          avgRatings={avgRatings}
-          rateBook={rateBook}
-          setUserBooks={setUserBooks}
-          newBook={newBook}
-          setNewBook={setNewBook}
-          addCustomBook={addCustomBook}
-          expandedBookId={expandedLibraryBookId}
-          recommendations={libraryRecommendations}
-          openBookDetails={openLibraryBookDetails}
-        />
-      )}
+        {view === "library" && (
+          <LibraryView
+            books={userBooks}
+            loading={loading.library}
+            avgRatings={avgRatings}
+            rateBook={rateBook}
+            setUserBooks={setUserBooks}
+            newBook={newBook}
+            setNewBook={setNewBook}
+            addCustomBook={addCustomBook}
+            expandedBookId={expandedLibraryBookId}
+            recommendations={libraryRecommendations}
+            openBookDetails={openLibraryBookDetails}
+          />
+        )}
+      </main>
     </div>
   );
 }

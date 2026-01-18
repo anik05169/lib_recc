@@ -14,8 +14,12 @@ SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY") or "your-secret-
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 30 days
 
-# Use pbkdf2_sha256 instead of bcrypt to avoid the 72-byte limit issue
-pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+# Use pbkdf2_sha256 with optimized rounds for faster local development
+pwd_context = CryptContext(
+    schemes=["pbkdf2_sha256"],
+    deprecated="auto",
+    pbkdf2_sha256__default_rounds=20000
+)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 

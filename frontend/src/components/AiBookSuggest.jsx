@@ -30,14 +30,14 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
   const [aiLoading, setAiLoading] = useState(false);
 
   const handleAddToLibrary = (book) => {
-    setNewBook({
+    const bookData = {
       book_id: Date.now() % 1000000,
       title: book.title,
       description: book.description,
       image_url: book.image_url || "/placeholder.jpg",
-    });
-
-    addCustomBook(); // 🔥 reuse existing logic
+    };
+    setNewBook(bookData);
+    addCustomBook(bookData);
   };
 
 
@@ -57,7 +57,7 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
 
       const data = await res.json();
 
-      // 🔥 ADD IMAGE + ID TO EACH BOOK
+      // ADD IMAGE + ID TO EACH BOOK
       const enriched = await Promise.all(
         (data.recommendations || []).map(async (book, idx) => ({
           ...book,
@@ -76,22 +76,21 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
 
   return (
     <>
-      <h3>AI Book Suggestions</h3>
-
       <div className="ai-suggest-box">
+        <h3>AI Assistant Suggestions</h3>
         <textarea
-          placeholder="Describe the kind of book you want (e.g. football biography, beginner AI, fantasy)..."
+          placeholder="I'm looking for a gripping sci-fi novel about time travel..."
           value={aiQuery}
           onChange={(e) => setAiQuery(e.target.value)}
         />
 
         <button onClick={getAiSuggestions} disabled={aiLoading}>
-          {aiLoading ? "Thinking..." : "Suggest Books"}
+          {aiLoading ? "Consulting AI..." : "Get Recommendations"}
         </button>
       </div>
 
       {aiSuggestions.length > 0 && (
-        <>
+        <div className="ai-results">
           <h4>AI Suggested Books</h4>
 
           <ul className="book-list">
@@ -103,24 +102,15 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
               >
                 <button
                   onClick={() => handleAddToLibrary(book)}
-                  style={{
-                    marginTop: "6px",
-                    padding: "8px",
-                    width: "100%",
-                    background: "#4f8cff",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "4px",
-                    cursor: "pointer",
-                  }}
                 >
-                  ➕ Add to My Library
+                  Add to Collection
                 </button>
               </BookCard>
             ))}
           </ul>
-        </>
+        </div>
       )}
+
 
     </>
   );

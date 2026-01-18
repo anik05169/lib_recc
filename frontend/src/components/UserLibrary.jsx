@@ -20,33 +20,46 @@ export default function UserLibrary({
           book={book}
           showDescription={expandedBookId === book.book_id}
         >
-          {avgRatings[book.book_id] && <p>⭐ {avgRatings[book.book_id]}</p>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => openBookDetails(book)}
+            >
+              {expandedBookId === book.book_id ? "Hide Similar" : "Find Similar"}
+            </button>
 
-          <button onClick={() => openBookDetails(book)}>
-            {expandedBookId === book.book_id ? "Hide Details" : "View Details"}
-          </button>
+            <div className="rating-select-wrapper" style={{ marginLeft: 'auto' }}>
+              {avgRatings[book.book_id] && (
+                <span className="rating-badge" style={{ marginRight: '8px', color: '#fbbf24', fontWeight: 'bold' }}>
+                  Rating: {avgRatings[book.book_id]}
+                </span>
+              )}
+              <select
+                className="btn-secondary"
+                style={{ padding: '6px 12px', width: 'auto' }}
+                value={book.currentRating || ""}
+                onChange={(e) => {
+                  const rating = Number(e.target.value);
+                  setUserBooks((prev) =>
+                    prev.map((b) =>
+                      b.book_id === book.book_id
+                        ? { ...b, currentRating: rating }
+                        : b
+                    )
+                  );
+                  rateBook(book.book_id, rating);
+                }}
+              >
+                <option value="">Rate</option>
+                {[1, 2, 3, 4, 5].map((r) => (
+                  <option key={r} value={r}>
+                    {r} {r === 1 ? 'Star' : 'Stars'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-          <select
-            value={book.currentRating || ""}
-            onChange={(e) => {
-              const rating = Number(e.target.value);
-              setUserBooks((prev) =>
-                prev.map((b) =>
-                  b.book_id === book.book_id
-                    ? { ...b, currentRating: rating }
-                    : b
-                )
-              );
-              rateBook(book.book_id, rating);
-            }}
-          >
-            <option value="">Rate</option>
-            {[1, 2, 3, 4, 5].map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
 
           {expandedBookId === book.book_id && (
             <div className="recommendation-box">
