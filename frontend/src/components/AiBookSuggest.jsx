@@ -7,18 +7,27 @@ import BookCard from "./BookCard";
 // Fetch book cover from Google Books (free)
 async function fetchBookImage(title, author) {
   try {
+    const apiKey = import.meta.env.VITE_GOOGLE_BOOKS_API_KEY;
     const query = encodeURIComponent(`${title} ${author}`);
-    const res = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1`
-    );
-    const data = await res.json();
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${query}&maxResults=1${apiKey ? `&key=${apiKey}` : ""}`;
 
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      if (res.status === 429) {
+        console.warn("Google Books API rate limit hit (429). Consider adding an API key.");
+      }
+      return "https://via.placeholder.com/150x200?text=No+Image";
+    }
+
+    const data = await res.json();
     return (
       data.items?.[0]?.volumeInfo?.imageLinks?.thumbnail ||
-      "/placeholder.jpg"
+      "https://via.placeholder.com/150x200?text=No+Image"
     );
-  } catch {
-    return "/placeholder.jpg";
+  } catch (error) {
+    console.error("Error fetching book image:", error);
+    return "https://via.placeholder.com/150x200?text=No+Image";
   }
 }
 
@@ -42,6 +51,8 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
 
 
 
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   const getAiSuggestions = async () => {
     if (!aiQuery.trim()) return;
 
@@ -56,15 +67,25 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
       });
 
       const data = await res.json();
+      const recommendations = data.recommendations || [];
+      const enriched = [];
 
-      // ADD IMAGE + ID TO EACH BOOK
-      const enriched = await Promise.all(
-        (data.recommendations || []).map(async (book, idx) => ({
+      // Fetch images sequentially with a delay to avoid 429 rate limiting
+      for (let i = 0; i < recommendations.length; i++) {
+        const book = recommendations[i];
+        const imageUrl = await fetchBookImage(book.title, book.author);
+
+        enriched.push({
           ...book,
-          book_id: `${Date.now()}-${idx}`,
-          image_url: await fetchBookImage(book.title, book.author),
-        }))
-      );
+          book_id: `${Date.now()}-${i}`,
+          image_url: imageUrl,
+        });
+
+        // Add a small delay between requests if there are more to fetch
+        if (i < recommendations.length - 1) {
+          await sleep(500); // 500ms delay to be safe
+        }
+      }
 
       setAiSuggestions(enriched);
     } catch (err) {

@@ -5,11 +5,11 @@ export default function BookCard({ book, children, showDescription }) {
     <li className="book-card">
       <div className="book-card-main">
         <img
-          src={book.image_url || "/placeholder.jpg"}
+          src={book.image_url || "https://via.placeholder.com/150x200?text=No+Image"}
           alt={book.title}
           className="book-cover"
           onError={(e) => {
-            e.target.src = "/placeholder.jpg";
+            e.target.src = "https://via.placeholder.com/150x200?text=No+Image";
           }}
         />
 
