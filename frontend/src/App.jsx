@@ -18,31 +18,52 @@ function App() {
   const [view, setView] = useState("catalog");
   const [catalogBooks, setCatalogBooks] = useState([]);
   const [userBooks, setUserBooks] = useState([]);
+  const [userBookIds, setUserBookIds] = useState(new Set());
+  const [userRatings, setUserRatings] = useState({});
   const [expandedBookId, setExpandedBookId] = useState(null);
   const [expandedLibraryBookId, setExpandedLibraryBookId] = useState(null);
   const [recommendations, setRecommendations] = useState({});
   const [libraryRecommendations, setLibraryRecommendations] = useState({});
   const [avgRatings, setAvgRatings] = useState({});
-  const [loading, setLoading] = useState({
-    catalog: false,
-    library: false,
-  });
+  const [loading, setLoading] = useState({ catalog: false, library: false });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
 
-  // NEW BOOK (for My Library)
+  /* ---------------- TOAST SYSTEM ---------------- */
+  const [toasts, setToasts] = useState([]);
+
+  const showToast = useCallback((message, type = "info") => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
+
+  // NEW BOOK (for My Library) — no book_id needed (auto-generated)
   const [newBook, setNewBook] = useState({
-    book_id: "",
     title: "",
     description: "",
   });
 
   /* ---------------- AUTH HELPERS ---------------- */
-  const getAuthHeaders = () => {
+  const getAuthHeaders = useCallback(() => {
     const storedToken = localStorage.getItem("token");
     return {
       "Content-Type": "application/json",
       Authorization: `Bearer ${storedToken || token}`,
     };
-  };
+  }, [token]);
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("token");
+    setToken(null);
+    setView("catalog");
+    setCatalogBooks([]);
+    setUserBooks([]);
+    setUserBookIds(new Set());
+    setUserRatings({});
+  }, []);
 
   const checkAuth = async () => {
     const storedToken = localStorage.getItem("token");
@@ -50,12 +71,10 @@ function App() {
       setCheckingAuth(false);
       return;
     }
-
     try {
       const res = await fetch(`${BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
-
       if (res.ok) {
         setToken(storedToken);
       } else {
@@ -82,29 +101,34 @@ function App() {
     setAuthView("login");
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    setToken(null);
-    setView("catalog");
-  };
-
   /* ---------------- LOADERS ---------------- */
   useEffect(() => {
     if (token) {
       loadCatalog();
       loadUserLibrary();
       loadAverageRatings();
+      loadUserRatings();
     }
   }, [token]);
 
-  const loadCatalog = async () => {
+  const loadCatalog = async (search = searchQuery, page = 1) => {
     setLoading((p) => ({ ...p, catalog: true }));
     try {
-      const res = await fetch(`${BASE_URL}/books`);
+      const params = new URLSearchParams({ page: String(page), limit: "50" });
+      if (search) params.set("search", search);
+      const res = await fetch(`${BASE_URL}/books?${params}`);
       const data = await res.json();
-      setCatalogBooks(data);
+      // Support both old (array) and new (paginated) response formats
+      if (Array.isArray(data)) {
+        setCatalogBooks(data);
+        setPagination({ page: 1, pages: 1, total: data.length });
+      } else {
+        setCatalogBooks(data.books || []);
+        setPagination({ page: data.page || 1, pages: data.pages || 1, total: data.total || 0 });
+      }
     } catch (err) {
       console.error("Failed to load catalog:", err);
+      showToast("Failed to load catalog", "error");
     } finally {
       setLoading((p) => ({ ...p, catalog: false }));
     }
@@ -119,11 +143,13 @@ function App() {
       if (res.ok) {
         const data = await res.json();
         setUserBooks(data);
+        setUserBookIds(new Set(data.map((b) => b.book_id)));
       } else if (res.status === 401) {
         handleLogout();
       }
     } catch (err) {
       console.error("Failed to load library:", err);
+      showToast("Failed to load library", "error");
     } finally {
       setLoading((p) => ({ ...p, library: false }));
     }
@@ -133,19 +159,41 @@ function App() {
     try {
       const res = await fetch(`${BASE_URL}/ratings/average`);
       const data = await res.json();
-
       const map = {};
       data.forEach((r) => {
         map[r._id] = r.avg_rating.toFixed(1);
       });
-
       setAvgRatings(map);
     } catch (err) {
       console.error("Failed to load ratings:", err);
     }
   };
 
+  const loadUserRatings = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/ratings/mine`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const map = {};
+        data.forEach((r) => { map[r.book_id] = r.rating; });
+        setUserRatings(map);
+      }
+    } catch (err) {
+      console.error("Failed to load user ratings:", err);
+    }
+  };
+
   /* ---------------- ACTIONS ---------------- */
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    loadCatalog(query, 1);
+  };
+
+  const handlePageChange = (page) => {
+    loadCatalog(searchQuery, page);
+  };
 
   // Open catalog book + fetch recommendations
   const openBookDetails = useCallback(
@@ -154,19 +202,11 @@ function App() {
         setExpandedBookId(null);
         return;
       }
-
       setExpandedBookId(book.book_id);
-
       try {
-        const res = await fetch(
-          `${BASE_URL}/recommend/${book.book_id}`
-        );
+        const res = await fetch(`${BASE_URL}/recommend/${book.book_id}`);
         const data = await res.json();
-
-        setRecommendations((prev) => ({
-          ...prev,
-          [book.book_id]: data,
-        }));
+        setRecommendations((prev) => ({ ...prev, [book.book_id]: data }));
       } catch (err) {
         console.error("Failed to load recommendations:", err);
       }
@@ -181,23 +221,14 @@ function App() {
         setExpandedLibraryBookId(null);
         return;
       }
-
       setExpandedLibraryBookId(book.book_id);
-
       try {
-        const res = await fetch(
-          `${BASE_URL}/user/recommend/${book.book_id}`,
-          {
-            headers: getAuthHeaders(),
-          }
-        );
+        const res = await fetch(`${BASE_URL}/user/recommend/${book.book_id}`, {
+          headers: getAuthHeaders(),
+        });
         if (res.ok) {
           const data = await res.json();
-
-          setLibraryRecommendations((prev) => ({
-            ...prev,
-            [book.book_id]: data,
-          }));
+          setLibraryRecommendations((prev) => ({ ...prev, [book.book_id]: data }));
         } else if (res.status === 401) {
           handleLogout();
         }
@@ -213,53 +244,67 @@ function App() {
     try {
       const res = await fetch(
         `${BASE_URL}/user/add-from-catalog?book_id=${book_id}`,
-        {
-          method: "POST",
-          headers: getAuthHeaders(),
-        }
+        { method: "POST", headers: getAuthHeaders() }
       );
       if (res.ok) {
         loadUserLibrary();
+        showToast("Book added to your collection!", "success");
       } else if (res.status === 401) {
         handleLogout();
       }
     } catch (err) {
       console.error("Failed to add book:", err);
+      showToast("Failed to add book", "error");
     }
   };
 
   // Rate book
   const rateBook = async (book_id, rating) => {
     try {
-      const res = await fetch(`${BASE_URL}/rate`, {
+      const res = await fetch(`${BASE_URL}/ratings`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          book_id,
-          rating,
-        }),
+        body: JSON.stringify({ book_id, rating }),
       });
       if (res.ok) {
         loadAverageRatings();
+        setUserRatings((prev) => ({ ...prev, [book_id]: rating }));
+        showToast(`Rated ${rating} star${rating > 1 ? "s" : ""}`, "success");
       } else if (res.status === 401) {
         handleLogout();
       }
     } catch (err) {
       console.error("Failed to rate book:", err);
+      showToast("Failed to save rating", "error");
+    }
+  };
+
+  // Delete from library
+  const deleteFromLibrary = async (book_id) => {
+    try {
+      const res = await fetch(`${BASE_URL}/user/library/${book_id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        loadUserLibrary();
+        loadAverageRatings();
+        showToast("Book removed from library", "info");
+      } else if (res.status === 401) {
+        handleLogout();
+      }
+    } catch (err) {
+      console.error("Failed to delete book:", err);
+      showToast("Failed to remove book", "error");
     }
   };
 
   // Add custom book
   const addCustomBook = async (bookToUse = null) => {
     const data = bookToUse || newBook;
-    const bookId = Number(data.book_id);
 
-    if (
-      !bookId ||
-      !data.title?.trim() ||
-      !data.description?.trim()
-    ) {
-      alert("Book ID must be a number and all fields are required");
+    if (!data.title?.trim() || !data.description?.trim()) {
+      showToast("Title and description are required", "warning");
       return;
     }
 
@@ -268,7 +313,6 @@ function App() {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          book_id: bookId,
           title: data.title,
           description: data.description,
           image_url: data.image_url || "/placeholder.jpg",
@@ -281,26 +325,19 @@ function App() {
           return;
         }
         const err = await res.json();
-        console.error(err);
-        alert("Backend rejected request");
+        showToast(err.detail || "Failed to add book", "error");
         return;
       }
 
       // reset
-      setNewBook({
-        book_id: "",
-        title: "",
-        description: "",
-        image_url: "",
-      });
-
-      loadCatalog();
+      setNewBook({ title: "", description: "", image_url: "" });
       loadUserLibrary();
+      showToast("Custom book added!", "success");
     } catch (err) {
       console.error("Failed to add custom book:", err);
+      showToast("Failed to add custom book", "error");
     }
   };
-
 
   /* ---------------- UI ---------------- */
 
@@ -353,6 +390,11 @@ function App() {
             recommendations={recommendations}
             openBookDetails={openBookDetails}
             addFromCatalog={addFromCatalog}
+            userBookIds={userBookIds}
+            searchQuery={searchQuery}
+            onSearch={handleSearch}
+            pagination={pagination}
+            onPageChange={handlePageChange}
           />
         )}
 
@@ -361,6 +403,7 @@ function App() {
             books={userBooks}
             loading={loading.library}
             avgRatings={avgRatings}
+            userRatings={userRatings}
             rateBook={rateBook}
             setUserBooks={setUserBooks}
             newBook={newBook}
@@ -369,12 +412,25 @@ function App() {
             expandedBookId={expandedLibraryBookId}
             recommendations={libraryRecommendations}
             openBookDetails={openLibraryBookDetails}
+            deleteFromLibrary={deleteFromLibrary}
+            showToast={showToast}
+            getAuthHeaders={getAuthHeaders}
           />
         )}
       </main>
+
+      {/* Toast notifications */}
+      {toasts.length > 0 && (
+        <div className="toast-container">
+          {toasts.map((t) => (
+            <div key={t.id} className={`toast ${t.type}`}>
+              {t.message}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
 export default App;
-

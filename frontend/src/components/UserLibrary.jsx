@@ -4,11 +4,13 @@ import { useState } from "react";
 export default function UserLibrary({
   books,
   avgRatings,
+  userRatings,
   rateBook,
   setUserBooks,
   expandedBookId,
   openBookDetails,
   recommendations,
+  deleteFromLibrary,
 }) {
   const [expandedRecId, setExpandedRecId] = useState(null);
 
@@ -20,7 +22,7 @@ export default function UserLibrary({
           book={book}
           showDescription={expandedBookId === book.book_id}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', flexWrap: 'wrap' }}>
             <button
               className="btn-secondary"
               onClick={() => openBookDetails(book)}
@@ -28,16 +30,24 @@ export default function UserLibrary({
               {expandedBookId === book.book_id ? "Hide Similar" : "Find Similar"}
             </button>
 
-            <div className="rating-select-wrapper" style={{ marginLeft: 'auto' }}>
+            <button
+              className="btn-danger"
+              onClick={() => deleteFromLibrary(book.book_id)}
+              title="Remove from library"
+            >
+              Remove
+            </button>
+
+            <div className="rating-select-wrapper" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {avgRatings[book.book_id] && (
-                <span className="rating-badge" style={{ marginRight: '8px', color: '#fbbf24', fontWeight: 'bold' }}>
-                  Rating: {avgRatings[book.book_id]}
+                <span style={{ color: '#fbbf24', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                  ★ {avgRatings[book.book_id]}
                 </span>
               )}
               <select
                 className="btn-secondary"
                 style={{ padding: '6px 12px', width: 'auto' }}
-                value={book.currentRating || ""}
+                value={userRatings?.[book.book_id] || book.currentRating || ""}
                 onChange={(e) => {
                   const rating = Number(e.target.value);
                   setUserBooks((prev) =>

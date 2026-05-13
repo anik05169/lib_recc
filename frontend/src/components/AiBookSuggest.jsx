@@ -15,32 +15,30 @@ async function fetchBookImage(title, author) {
 
     if (!res.ok) {
       if (res.status === 429) {
-        console.warn("Google Books API rate limit hit (429). Consider adding an API key.");
+        console.warn("Google Books API rate limit hit (429).");
+        return { error: 429, url: "https://placehold.co/150x200?text=No+Image" };
       }
-      return "https://via.placeholder.com/150x200?text=No+Image";
+      return { error: res.status, url: "https://placehold.co/150x200?text=No+Image" };
     }
 
     const data = await res.json();
-    return (
-      data.items?.[0]?.volumeInfo?.imageLinks?.thumbnail ||
-      "https://via.placeholder.com/150x200?text=No+Image"
-    );
+    const thumbnail = data.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
+    return { error: null, url: thumbnail || "https://placehold.co/150x200?text=No+Image" };
   } catch (error) {
     console.error("Error fetching book image:", error);
-    return "https://via.placeholder.com/150x200?text=No+Image";
+    return { error: "fetch_error", url: "https://placehold.co/150x200?text=No+Image" };
   }
 }
 
 /* ------------------ Component ------------------ */
 
-export default function AiBookSuggest({ setNewBook, addCustomBook }) {
+export default function AiBookSuggest({ setNewBook, addCustomBook, showToast, getAuthHeaders }) {
   const [aiQuery, setAiQuery] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState([]);
   const [aiLoading, setAiLoading] = useState(false);
 
   const handleAddToLibrary = (book) => {
     const bookData = {
-      book_id: Date.now() % 1000000,
       title: book.title,
       description: book.description,
       image_url: book.image_url || "/placeholder.jpg",
@@ -48,8 +46,6 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
     setNewBook(bookData);
     addCustomBook(bookData);
   };
-
-
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -62,18 +58,35 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
     try {
       const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/books/ai-suggest-new`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders ? getAuthHeaders() : { "Content-Type": "application/json" },
         body: JSON.stringify({ description: aiQuery }),
       });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          showToast?.("Please log in to use AI suggestions", "warning");
+          return;
+        }
+        throw new Error(`AI request failed: ${res.status}`);
+      }
 
       const data = await res.json();
       const recommendations = data.recommendations || [];
       const enriched = [];
 
       // Fetch images sequentially with a delay to avoid 429 rate limiting
+      let isRateLimited = false;
       for (let i = 0; i < recommendations.length; i++) {
         const book = recommendations[i];
-        const imageUrl = await fetchBookImage(book.title, book.author);
+        let imageUrl = "https://placehold.co/150x200?text=No+Image";
+
+        if (!isRateLimited) {
+          const result = await fetchBookImage(book.title, book.author);
+          imageUrl = result.url;
+          if (result.error === 429) {
+            isRateLimited = true;
+          }
+        }
 
         enriched.push({
           ...book,
@@ -81,15 +94,19 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
           image_url: imageUrl,
         });
 
-        // Add a small delay between requests if there are more to fetch
-        if (i < recommendations.length - 1) {
-          await sleep(500); // 500ms delay to be safe
+        // Delay to avoid rate limiting
+        if (!isRateLimited && i < recommendations.length - 1) {
+          await sleep(1000);
         }
       }
 
       setAiSuggestions(enriched);
+      if (enriched.length > 0) {
+        showToast?.(`Found ${enriched.length} AI recommendations!`, "success");
+      }
     } catch (err) {
       console.error("AI suggestion error:", err);
+      showToast?.("AI suggestion failed. Try again later.", "error");
     } finally {
       setAiLoading(false);
     }
@@ -131,8 +148,6 @@ export default function AiBookSuggest({ setNewBook, addCustomBook }) {
           </ul>
         </div>
       )}
-
-
     </>
   );
 }

@@ -1,6 +1,10 @@
 import math
+import threading
 import pandas as pd
 from collections import Counter, defaultdict
+
+# Thread lock for safe concurrent access
+_lock = threading.Lock()
 
 # Global model
 _books_df = None
@@ -60,28 +64,33 @@ def train_model(books: list):
     if not books:
         return
 
-    _books_df = pd.DataFrame(books)
-    tfidf = _tfidf_matrix(_books_df["description"].fillna(""))
-    _similarity = [
+    df = pd.DataFrame(books)
+    tfidf = _tfidf_matrix(df["description"].fillna(""))
+    sim = [
         [_cosine(a, b) for b in tfidf]
         for a in tfidf
     ]
 
+    with _lock:
+        _books_df = df
+        _similarity = sim
+
 
 def recommend(book_id: int, top_n=5):
-    if _books_df is None:
-        return []
+    with _lock:
+        if _books_df is None:
+            return []
 
-    idxs = _books_df.index[_books_df["book_id"] == book_id].tolist()
-    if not idxs:
-        return []
+        idxs = _books_df.index[_books_df["book_id"] == book_id].tolist()
+        if not idxs:
+            return []
 
-    idx = idxs[0]
-    scores = list(enumerate(_similarity[idx]))
-    scores.sort(key=lambda x: x[1], reverse=True)
+        idx = idxs[0]
+        scores = list(enumerate(_similarity[idx]))
+        scores.sort(key=lambda x: x[1], reverse=True)
 
-    top = scores[1:top_n + 1]
-    return _books_df.iloc[[i for i, _ in top]].to_dict("records")
+        top = scores[1:top_n + 1]
+        return _books_df.iloc[[i for i, _ in top]].to_dict("records")
 
 
 # -----------------------
@@ -90,7 +99,8 @@ def recommend(book_id: int, top_n=5):
 
 def train_user_model(user_id: str, books: list):
     if not books:
-        _user_models.pop(user_id, None)
+        with _lock:
+            _user_models.pop(user_id, None)
         return
 
     df = pd.DataFrame(books)
@@ -104,32 +114,41 @@ def train_user_model(user_id: str, books: list):
         for a in tfidf
     ]
 
-    _user_models[user_id] = {
-        "df": df,
-        "similarity": similarity
-    }
+    with _lock:
+        _user_models[user_id] = {
+            "df": df,
+            "similarity": similarity
+        }
 
 
 def recommend_user(user_id: str, book_id: int, top_n=5, user_books=None):
-    if user_id not in _user_models:
-        if user_books is not None:
-            train_user_model(user_id, user_books)
+    with _lock:
+        if user_id not in _user_models:
+            if user_books is not None:
+                # Release lock for training, re-acquire after
+                pass
+            else:
+                return []
 
-    model = _user_models.get(user_id)
-    if not model:
-        return []
+    # Train outside lock if needed
+    if user_id not in _user_models and user_books is not None:
+        train_user_model(user_id, user_books)
 
-    df = model["df"]
-    similarity = model["similarity"]
+    with _lock:
+        model = _user_models.get(user_id)
+        if not model:
+            return []
 
-    idxs = df.index[df["book_id"] == book_id].tolist()
-    if not idxs:
-        return []
+        df = model["df"]
+        similarity = model["similarity"]
 
-    idx = idxs[0]
-    scores = list(enumerate(similarity[idx]))
-    scores.sort(key=lambda x: x[1], reverse=True)
+        idxs = df.index[df["book_id"] == book_id].tolist()
+        if not idxs:
+            return []
 
-    top = scores[1:top_n + 1]
-    return df.iloc[[i for i, _ in top]].to_dict("records")
+        idx = idxs[0]
+        scores = list(enumerate(similarity[idx]))
+        scores.sort(key=lambda x: x[1], reverse=True)
 
+        top = scores[1:top_n + 1]
+        return df.iloc[[i for i, _ in top]].to_dict("records")

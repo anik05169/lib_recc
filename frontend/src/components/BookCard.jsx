@@ -1,15 +1,19 @@
 //BookCard.jsx
 
-export default function BookCard({ book, children, showDescription }) {
+export default function BookCard({ book, children, showDescription, inLibrary }) {
   return (
     <li className="book-card">
+      {inLibrary && (
+        <span className="badge-in-library">✓ In Library</span>
+      )}
+
       <div className="book-card-main">
         <img
-          src={book.image_url || "https://via.placeholder.com/150x200?text=No+Image"}
+          src={book.image_url || "https://placehold.co/150x200?text=No+Image"}
           alt={book.title}
           className="book-cover"
           onError={(e) => {
-            e.target.src = "https://via.placeholder.com/150x200?text=No+Image";
+            e.target.src = "https://placehold.co/150x200?text=No+Image";
           }}
         />
 

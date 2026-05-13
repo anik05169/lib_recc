@@ -3,9 +3,10 @@ from app.db.mongo import get_mongo_db
 from app.models.schemas import Rating
 from app.core.auth import get_current_user
 
-router = APIRouter(prefix="", tags=["Ratings"])
+router = APIRouter(prefix="/ratings", tags=["Ratings"])
 
-@router.post("/rate")
+
+@router.post("")
 def rate_book(
     book_id: int = Body(...),
     rating: int = Body(...),
@@ -33,10 +34,18 @@ def rate_book(
     return {"message": "Rating saved"}
 
 
-@router.get("/ratings/average")
+@router.get("/average")
 def average_ratings():
     db = get_mongo_db()
     pipeline = [
         {"$group": {"_id": "$book_id", "avg_rating": {"$avg": "$rating"}}}
     ]
     return list(db.ratings.aggregate(pipeline))
+
+
+@router.get("/mine")
+def get_my_ratings(current_user: dict = Depends(get_current_user)):
+    """Get the current user's ratings for all books they've rated."""
+    db = get_mongo_db()
+    user_id = str(current_user["_id"])
+    return list(db.ratings.find({"user_id": user_id}, {"_id": 0, "book_id": 1, "rating": 1}))

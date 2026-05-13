@@ -23,6 +23,11 @@ function Register({ onRegister, switchToLogin }) {
 
       if (!response.ok) {
         const data = await response.json();
+        // Handle Pydantic validation errors (password strength)
+        if (data.detail && Array.isArray(data.detail)) {
+          const messages = data.detail.map((d) => d.msg || d.message || JSON.stringify(d));
+          throw new Error(messages.join(". "));
+        }
         throw new Error(data.detail || "Registration failed");
       }
 
@@ -82,7 +87,11 @@ function Register({ onRegister, switchToLogin }) {
               onChange={(e) => setPassword(e.target.value)}
               required
               disabled={loading}
+              minLength={8}
             />
+            <small style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '4px', display: 'block' }}>
+              Min 8 characters, 1 uppercase, 1 digit
+            </small>
           </div>
           <button type="submit" disabled={loading}>
             {loading ? "Creating account..." : "Register"}
@@ -100,4 +109,3 @@ function Register({ onRegister, switchToLogin }) {
 }
 
 export default Register;
-

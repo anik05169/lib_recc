@@ -3,6 +3,7 @@
 import AiBookSuggest from "../components/AiBookSuggest";
 import AddCustomBook from "../components/AddCustomBook";
 import UserLibrary from "../components/UserLibrary";
+import SkeletonCard from "../components/SkeletonCard";
 
 export default function LibraryView(props) {
   const {
@@ -11,6 +12,8 @@ export default function LibraryView(props) {
     newBook,
     setNewBook,
     addCustomBook,
+    showToast,
+    getAuthHeaders,
   } = props;
 
   return (
@@ -18,10 +21,11 @@ export default function LibraryView(props) {
       <h2>My Library</h2>
 
       <AiBookSuggest
-  setNewBook={setNewBook}
-  addCustomBook={addCustomBook}
-/>
-
+        setNewBook={setNewBook}
+        addCustomBook={addCustomBook}
+        showToast={showToast}
+        getAuthHeaders={getAuthHeaders}
+      />
 
       <AddCustomBook
         newBook={newBook}
@@ -29,9 +33,22 @@ export default function LibraryView(props) {
         addCustomBook={addCustomBook}
       />
 
-      {loading && <p>Loading library...</p>}
+      {/* Skeleton loaders */}
+      {loading && (
+        <ul className="book-list" style={{ marginTop: "2rem" }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={`skel-lib-${i}`} />
+          ))}
+        </ul>
+      )}
 
-      {books?.length > 0 && <UserLibrary {...props} />}
+      {!loading && books?.length === 0 && (
+        <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "3rem" }}>
+          Your library is empty. Add books from the catalog or use the AI assistant!
+        </p>
+      )}
+
+      {!loading && books?.length > 0 && <UserLibrary {...props} />}
     </>
   );
 }

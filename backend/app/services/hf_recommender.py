@@ -3,8 +3,6 @@ import os
 import requests
 
 HF_API_KEY = os.getenv("HF_API_KEY")
-print("HF_API_KEY prefix:", HF_API_KEY[:6] if HF_API_KEY else None)
-
 
 API_URL = "https://router.huggingface.co/v1/chat/completions"
 
@@ -51,17 +49,12 @@ def recommend_books_hf(user_description: str):
     response = requests.post(API_URL, headers=HEADERS, json=payload)
 
     if response.status_code != 200:
-        print("HF STATUS:", response.status_code)
-        print("HF RESPONSE:", response.text)
         response.raise_for_status()
 
     data = response.json()
-    print("HF RAW RESPONSE:", json.dumps(data, indent=2))
     content = data["choices"][0]["message"]["content"].strip()
-    print("HF CONTENT:", repr(content))
 
     try:
         return json.loads(content)
     except json.JSONDecodeError:
-        print("RAW MODEL OUTPUT:\n", content)
         return {"recommendations": []}
