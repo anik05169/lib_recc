@@ -65,7 +65,7 @@ function App() {
     setUserRatings({});
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     const storedToken = localStorage.getItem("token");
     if (!storedToken) {
       setCheckingAuth(false);
@@ -80,16 +80,94 @@ function App() {
       } else {
         localStorage.removeItem("token");
       }
-    } catch (err) {
+    } catch {
       localStorage.removeItem("token");
     } finally {
       setCheckingAuth(false);
     }
-  };
+  }, []);
+
+  const loadCatalog = useCallback(
+    async (search = searchQuery, page = 1) => {
+      setLoading((p) => ({ ...p, catalog: true }));
+      try {
+        const params = new URLSearchParams({ page: String(page), limit: "50" });
+        if (search) params.set("search", search);
+        const res = await fetch(`${BASE_URL}/books?${params}`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setCatalogBooks(data);
+          setPagination({ page: 1, pages: 1, total: data.length });
+        } else {
+          setCatalogBooks(data.books || []);
+          setPagination({ page: data.page || 1, pages: data.pages || 1, total: data.total || 0 });
+        }
+      } catch (err) {
+        console.error("Failed to load catalog:", err);
+        showToast("Failed to load catalog", "error");
+      } finally {
+        setLoading((p) => ({ ...p, catalog: false }));
+      }
+    },
+    [searchQuery, showToast]
+  );
+
+  const loadUserLibrary = useCallback(async () => {
+    setLoading((p) => ({ ...p, library: true }));
+    try {
+      const res = await fetch(`${BASE_URL}/user/library`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserBooks(data);
+        setUserBookIds(new Set(data.map((b) => b.book_id)));
+      } else if (res.status === 401) {
+        handleLogout();
+      }
+    } catch (err) {
+      console.error("Failed to load library:", err);
+      showToast("Failed to load library", "error");
+    } finally {
+      setLoading((p) => ({ ...p, library: false }));
+    }
+  }, [getAuthHeaders, handleLogout, showToast]);
+
+  const loadAverageRatings = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/ratings/average`);
+      const data = await res.json();
+      const map = {};
+      data.forEach((r) => {
+        map[r._id] = r.avg_rating.toFixed(1);
+      });
+      setAvgRatings(map);
+    } catch (err) {
+      console.error("Failed to load ratings:", err);
+    }
+  }, []);
+
+  const loadUserRatings = useCallback(async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/ratings/mine`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const map = {};
+        data.forEach((r) => { map[r.book_id] = r.rating; });
+        setUserRatings(map);
+      } else if (res.status === 401) {
+        handleLogout();
+      }
+    } catch (err) {
+      console.error("Failed to load user ratings:", err);
+    }
+  }, [getAuthHeaders, handleLogout]);
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   const handleLogin = (newToken) => {
     setToken(newToken);
@@ -109,81 +187,7 @@ function App() {
       loadAverageRatings();
       loadUserRatings();
     }
-  }, [token]);
-
-  const loadCatalog = async (search = searchQuery, page = 1) => {
-    setLoading((p) => ({ ...p, catalog: true }));
-    try {
-      const params = new URLSearchParams({ page: String(page), limit: "50" });
-      if (search) params.set("search", search);
-      const res = await fetch(`${BASE_URL}/books?${params}`);
-      const data = await res.json();
-      // Support both old (array) and new (paginated) response formats
-      if (Array.isArray(data)) {
-        setCatalogBooks(data);
-        setPagination({ page: 1, pages: 1, total: data.length });
-      } else {
-        setCatalogBooks(data.books || []);
-        setPagination({ page: data.page || 1, pages: data.pages || 1, total: data.total || 0 });
-      }
-    } catch (err) {
-      console.error("Failed to load catalog:", err);
-      showToast("Failed to load catalog", "error");
-    } finally {
-      setLoading((p) => ({ ...p, catalog: false }));
-    }
-  };
-
-  const loadUserLibrary = async () => {
-    setLoading((p) => ({ ...p, library: true }));
-    try {
-      const res = await fetch(`${BASE_URL}/user/library`, {
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUserBooks(data);
-        setUserBookIds(new Set(data.map((b) => b.book_id)));
-      } else if (res.status === 401) {
-        handleLogout();
-      }
-    } catch (err) {
-      console.error("Failed to load library:", err);
-      showToast("Failed to load library", "error");
-    } finally {
-      setLoading((p) => ({ ...p, library: false }));
-    }
-  };
-
-  const loadAverageRatings = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/ratings/average`);
-      const data = await res.json();
-      const map = {};
-      data.forEach((r) => {
-        map[r._id] = r.avg_rating.toFixed(1);
-      });
-      setAvgRatings(map);
-    } catch (err) {
-      console.error("Failed to load ratings:", err);
-    }
-  };
-
-  const loadUserRatings = async () => {
-    try {
-      const res = await fetch(`${BASE_URL}/ratings/mine`, {
-        headers: getAuthHeaders(),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const map = {};
-        data.forEach((r) => { map[r.book_id] = r.rating; });
-        setUserRatings(map);
-      }
-    } catch (err) {
-      console.error("Failed to load user ratings:", err);
-    }
-  };
+  }, [token, loadCatalog, loadUserLibrary, loadAverageRatings, loadUserRatings]);
 
   /* ---------------- ACTIONS ---------------- */
   const handleSearch = (query) => {
@@ -236,7 +240,7 @@ function App() {
         console.error("Failed to load library recommendations:", err);
       }
     },
-    [expandedLibraryBookId]
+    [expandedLibraryBookId, getAuthHeaders, handleLogout]
   );
 
   // Add catalog book to user library

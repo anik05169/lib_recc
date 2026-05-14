@@ -31,7 +31,7 @@ function Register({ onRegister, switchToLogin }) {
         throw new Error(data.detail || "Registration failed");
       }
 
-      const data = await response.json();
+      await response.json();
       // After registration, automatically log in
       const loginResponse = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/auth/login`, {
         method: "POST",

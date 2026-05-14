@@ -26,7 +26,7 @@ export default function CatalogView({
       onSearch(localSearch);
     }, 400);
     return () => clearTimeout(debounceRef.current);
-  }, [localSearch]);
+  }, [localSearch, onSearch]);
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {

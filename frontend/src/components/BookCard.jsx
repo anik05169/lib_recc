@@ -1,6 +1,6 @@
 //BookCard.jsx
 
-export default function BookCard({ book, children, showDescription, inLibrary }) {
+export default function BookCard({ book, children, inLibrary }) {
   return (
     <li className="book-card">
       {inLibrary && (
