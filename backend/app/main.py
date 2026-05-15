@@ -4,12 +4,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from threading import Thread
 
-from app.core.config import setup_cors
+from app.core.config import setup_cors, validate_runtime_config
 from app.routes import books, users, ratings, auth
 from app.startup import train_recommender_on_startup
 
-from dotenv import load_dotenv
-load_dotenv()
+validate_runtime_config()
 
 
 @asynccontextmanager
