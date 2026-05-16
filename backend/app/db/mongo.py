@@ -11,8 +11,12 @@ MONGO_URI = os.getenv("MONGODB_URI") or os.getenv("MONGO_URI") or "mongodb://loc
 printed_uri = MONGO_URI.split("@")[-1] if "@" in MONGO_URI else MONGO_URI
 print(f"Connecting to MongoDB at: ...@{printed_uri}")
 
-client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-db = client["library_db"]
+client = None
+db = None
 
 def get_mongo_db():
+    global client, db
+    if db is None:
+        client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+        db = client["library_db"]
     return db

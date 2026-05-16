@@ -1,6 +1,6 @@
 from app.db.mongo import get_mongo_db
 from app.services.recommender import train_model
-from pymongo.errors import ServerSelectionTimeoutError
+from pymongo.errors import ConfigurationError, ServerSelectionTimeoutError
 
 def train_recommender_on_startup():
     """
@@ -20,6 +20,9 @@ def train_recommender_on_startup():
     except ServerSelectionTimeoutError:
         print("Could not connect to MongoDB. Recommender not trained.")
         print("Hint: Check if your IP address is whitelisted in MongoDB Atlas.")
+    except ConfigurationError as e:
+        print("MongoDB configuration error. Recommender not trained.")
+        print(f"Details: {e}")
     except Exception as e:
         print(f"Error during recommender startup: {e}")
 
