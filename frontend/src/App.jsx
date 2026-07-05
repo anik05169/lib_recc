@@ -1,16 +1,17 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import CatalogView from "./views/CatalogView";
 import LibraryView from "./views/LibraryView";
 import Login from "./components/Login";
 import Register from "./components/Register";
-import { API_BASE_URL } from "./api";
+import { API_BASE_URL, isApiConfigured, PLACEHOLDER_IMAGE_URL } from "./api";
 import "./App.css";
 
-const BASE_URL = API_BASE_URL.replace(/\/$/, "");
+const BASE_URL = API_BASE_URL;
 
 function App() {
   /* ---------------- AUTH STATE ---------------- */
   const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
   const [authView, setAuthView] = useState("login"); // "login" or "register"
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -55,9 +56,12 @@ function App() {
     };
   }, [token]);
 
+  const catalogAbortRef = useRef(null);
+
   const handleLogout = useCallback(() => {
     localStorage.removeItem("token");
     setToken(null);
+    setUser(null);
     setView("catalog");
     setCatalogBooks([]);
     setUserBooks([]);
@@ -76,7 +80,9 @@ function App() {
         headers: { Authorization: `Bearer ${storedToken}` },
       });
       if (res.ok) {
+        const data = await res.json();
         setToken(storedToken);
+        setUser(data);
       } else {
         localStorage.removeItem("token");
       }
@@ -88,12 +94,24 @@ function App() {
   }, []);
 
   const loadCatalog = useCallback(
-    async (search = searchQuery, page = 1) => {
+    async (search = "", page = 1) => {
+      if (catalogAbortRef.current) {
+        catalogAbortRef.current.abort();
+      }
+      const controller = new AbortController();
+      catalogAbortRef.current = controller;
+
       setLoading((p) => ({ ...p, catalog: true }));
       try {
         const params = new URLSearchParams({ page: String(page), limit: "50" });
         if (search) params.set("search", search);
-        const res = await fetch(`${BASE_URL}/books?${params}`);
+        const res = await fetch(`${BASE_URL}/books?${params}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          showToast("Failed to load catalog", "error");
+          return;
+        }
         const data = await res.json();
         if (Array.isArray(data)) {
           setCatalogBooks(data);
@@ -103,13 +121,16 @@ function App() {
           setPagination({ page: data.page || 1, pages: data.pages || 1, total: data.total || 0 });
         }
       } catch (err) {
+        if (err.name === "AbortError") return;
         console.error("Failed to load catalog:", err);
         showToast("Failed to load catalog", "error");
       } finally {
-        setLoading((p) => ({ ...p, catalog: false }));
+        if (!controller.signal.aborted) {
+          setLoading((p) => ({ ...p, catalog: false }));
+        }
       }
     },
-    [searchQuery, showToast]
+    [showToast]
   );
 
   const loadUserLibrary = useCallback(async () => {
@@ -136,7 +157,9 @@ function App() {
   const loadAverageRatings = useCallback(async () => {
     try {
       const res = await fetch(`${BASE_URL}/ratings/average`);
+      if (!res.ok) return;
       const data = await res.json();
+      if (!Array.isArray(data)) return;
       const map = {};
       data.forEach((r) => {
         map[r._id] = r.avg_rating.toFixed(1);
@@ -169,14 +192,30 @@ function App() {
     checkAuth();
   }, [checkAuth]);
 
-  const handleLogin = (newToken) => {
+  const handleLogin = async (newToken) => {
     setToken(newToken);
     setAuthView("login");
+    try {
+      const res = await fetch(`${BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${newToken}` },
+      });
+      if (res.ok) setUser(await res.json());
+    } catch {
+      /* profile loads on next checkAuth if needed */
+    }
   };
 
-  const handleRegister = (newToken) => {
+  const handleRegister = async (newToken) => {
     setToken(newToken);
     setAuthView("login");
+    try {
+      const res = await fetch(`${BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${newToken}` },
+      });
+      if (res.ok) setUser(await res.json());
+    } catch {
+      /* ignore */
+    }
   };
 
   /* ---------------- LOADERS ---------------- */
@@ -190,14 +229,14 @@ function App() {
   }, [token, loadCatalog, loadUserLibrary, loadAverageRatings, loadUserRatings]);
 
   /* ---------------- ACTIONS ---------------- */
-  const handleSearch = (query) => {
+  const handleSearch = useCallback((query) => {
     setSearchQuery(query);
     loadCatalog(query, 1);
-  };
+  }, [loadCatalog]);
 
-  const handlePageChange = (page) => {
+  const handlePageChange = useCallback((page) => {
     loadCatalog(searchQuery, page);
-  };
+  }, [loadCatalog, searchQuery]);
 
   // Open catalog book + fetch recommendations
   const openBookDetails = useCallback(
@@ -209,10 +248,18 @@ function App() {
       setExpandedBookId(book.book_id);
       try {
         const res = await fetch(`${BASE_URL}/recommend/${book.book_id}`);
+        if (!res.ok) {
+          setRecommendations((prev) => ({ ...prev, [book.book_id]: [] }));
+          return;
+        }
         const data = await res.json();
-        setRecommendations((prev) => ({ ...prev, [book.book_id]: data }));
+        setRecommendations((prev) => ({
+          ...prev,
+          [book.book_id]: Array.isArray(data) ? data : [],
+        }));
       } catch (err) {
         console.error("Failed to load recommendations:", err);
+        setRecommendations((prev) => ({ ...prev, [book.book_id]: [] }));
       }
     },
     [expandedBookId]
@@ -232,12 +279,18 @@ function App() {
         });
         if (res.ok) {
           const data = await res.json();
-          setLibraryRecommendations((prev) => ({ ...prev, [book.book_id]: data }));
+          setLibraryRecommendations((prev) => ({
+            ...prev,
+            [book.book_id]: Array.isArray(data) ? data : [],
+          }));
         } else if (res.status === 401) {
           handleLogout();
+        } else {
+          setLibraryRecommendations((prev) => ({ ...prev, [book.book_id]: [] }));
         }
       } catch (err) {
         console.error("Failed to load library recommendations:", err);
+        setLibraryRecommendations((prev) => ({ ...prev, [book.book_id]: [] }));
       }
     },
     [expandedLibraryBookId, getAuthHeaders, handleLogout]
@@ -255,6 +308,9 @@ function App() {
         showToast("Book added to your collection!", "success");
       } else if (res.status === 401) {
         handleLogout();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || "Failed to add book", "error");
       }
     } catch (err) {
       console.error("Failed to add book:", err);
@@ -276,6 +332,9 @@ function App() {
         showToast(`Rated ${rating} star${rating > 1 ? "s" : ""}`, "success");
       } else if (res.status === 401) {
         handleLogout();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || "Failed to save rating", "error");
       }
     } catch (err) {
       console.error("Failed to rate book:", err);
@@ -296,6 +355,9 @@ function App() {
         showToast("Book removed from library", "info");
       } else if (res.status === 401) {
         handleLogout();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast(err.detail || "Failed to remove book", "error");
       }
     } catch (err) {
       console.error("Failed to delete book:", err);
@@ -319,7 +381,7 @@ function App() {
         body: JSON.stringify({
           title: data.title,
           description: data.description,
-          image_url: data.image_url || "/placeholder.jpg",
+          image_url: data.image_url || PLACEHOLDER_IMAGE_URL,
         }),
       });
 
@@ -353,6 +415,18 @@ function App() {
     );
   }
 
+  if (!isApiConfigured) {
+    return (
+      <div className="container">
+        <h1>Configuration Required</h1>
+        <p>
+          Set <code>VITE_API_BASE_URL</code> in <code>frontend/.env</code> (see{" "}
+          <code>frontend/.env.example</code>).
+        </p>
+      </div>
+    );
+  }
+
   if (!token) {
     return authView === "login" ? (
       <Login onLogin={handleLogin} switchToRegister={() => setAuthView("register")} />
@@ -364,7 +438,12 @@ function App() {
   return (
     <div className="container">
       <header className="header-section">
-        <h1>Library AI</h1>
+        <div>
+          <h1>Library AI</h1>
+          {user?.name && (
+            <p className="header-greeting">Welcome, {user.name}</p>
+          )}
+        </div>
         <button onClick={handleLogout} className="btn-logout btn-secondary">
           Logout
         </button>
@@ -425,7 +504,7 @@ function App() {
 
       {/* Toast notifications */}
       {toasts.length > 0 && (
-        <div className="toast-container">
+        <div className="toast-container" role="status" aria-live="polite">
           {toasts.map((t) => (
             <div key={t.id} className={`toast ${t.type}`}>
               {t.message}

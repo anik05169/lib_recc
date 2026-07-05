@@ -1,0 +1,93 @@
+# Database
+
+**Database name:** `library_db`  
+**Driver:** pymongo (`backend/app/db/mongo.py`)  
+**Env var:** `MONGODB_URI` or `MONGO_URI` (defaults to `mongodb://localhost:27017/`)
+
+---
+
+## Collections
+
+### `users`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `_id` | ObjectId | MongoDB default |
+| `email` | string | Login identifier |
+| `password` | string | pbkdf2_sha256 hash |
+| `name` | string | Display name |
+
+No `created_at`. No unique index enforced in code (Phase 3).
+
+---
+
+### `books` (global catalog)
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `book_id` | int | Business key; auto-generated if missing |
+| `title` | string | |
+| `description` | string | Used for TF-IDF |
+| `image_url` | string | Default: placehold.co URL |
+
+Seed data: `library_db.books.json` at repo root.
+
+---
+
+### `user_books` (personal library)
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `user_id` | string | `str(ObjectId)` |
+| `book_id` | int | |
+| `title`, `description`, `image_url` | string | Denormalized from catalog or custom |
+| `source` | string | `"catalog"` or `"custom"` |
+
+**Denormalization:** Adding from catalog copies the full book doc. Catalog edits do not sync.
+
+---
+
+### `ratings`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `user_id` | string | |
+| `book_id` | int | |
+| `rating` | int | 1–5 |
+
+Upserted on `POST /ratings`. Deleted when book removed from library.
+
+---
+
+## `book_id` generation
+
+```python
+book_id = int(time.time() * 1000) % 10_000_000
+```
+
+Used in `POST /books` and `POST /user/add-custom-book`. Collision risk exists (Phase 3: use ObjectId or UUID).
+
+---
+
+## Indexes (planned — Phase 3)
+
+| Collection | Index |
+|------------|-------|
+| `users` | unique `{ email: 1 }` |
+| `books` | unique `{ book_id: 1 }` |
+| `user_books` | unique `{ user_id: 1, book_id: 1 }` |
+| `ratings` | unique `{ user_id: 1, book_id: 1 }` |
+
+Not implemented yet. Add via `ensure_indexes()` at startup in Phase 3.
+
+---
+
+## Manual seeding tools
+
+| File | Purpose |
+|------|---------|
+| `library_db.books.json` | Import catalog JSON |
+| `backend/add_images.py` | Backfill Open Library cover URLs (uses localhost URI) |
+| `backend/add_docs.ipynb` | Notebook for bulk inserts |
+
+Not run automatically at app startup.

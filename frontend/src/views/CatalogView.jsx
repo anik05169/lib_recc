@@ -18,9 +18,14 @@ export default function CatalogView({
   const [expandedRecId, setExpandedRecId] = useState(null);
   const [localSearch, setLocalSearch] = useState(searchQuery || "");
   const debounceRef = useRef(null);
+  const skipInitialSearch = useRef(true);
 
-  // Debounced search
+  // Debounced search — only fires when the user changes the input
   useEffect(() => {
+    if (skipInitialSearch.current) {
+      skipInitialSearch.current = false;
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       onSearch(localSearch);
@@ -56,13 +61,19 @@ export default function CatalogView({
         />
       </div>
 
-      {/* Skeleton loaders while loading */}
-      {loading && (
+      {/* Skeleton loaders only on initial empty load */}
+      {loading && (!books || books.length === 0) && (
         <ul className="book-list">
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={`skel-${i}`} />
           ))}
         </ul>
+      )}
+
+      {loading && books && books.length > 0 && (
+        <p className="catalog-updating" style={{ color: "var(--text-muted)", marginBottom: "1rem" }}>
+          Updating results…
+        </p>
       )}
 
       {/* No results */}
@@ -72,8 +83,8 @@ export default function CatalogView({
         </p>
       )}
 
-      {/* Book grid */}
-      {!loading && books && books.length > 0 && (
+      {/* Book grid — keep visible while refreshing search */}
+      {books && books.length > 0 && (
         <ul className="book-list">
           {books.map((book) => (
             <BookCard

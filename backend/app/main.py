@@ -6,6 +6,7 @@ from threading import Thread
 
 from app.core.config import setup_cors, validate_runtime_config
 from app.routes import books, users, ratings, auth
+from app.services.recommender import is_model_ready
 from app.startup import train_recommender_on_startup
 
 validate_runtime_config()
@@ -32,3 +33,8 @@ app.include_router(ratings.router)
 @app.get("/")
 def root():
     return {"message": "Personal Library API running"}
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "recommender_ready": is_model_ready()}

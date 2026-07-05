@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { API_BASE_URL } from "../api";
+import { formatApiError } from "../utils/apiError";
 import "./Login.css";
 
 function Login({ onLogin, switchToRegister }) {
@@ -22,7 +23,7 @@ function Login({ onLogin, switchToRegister }) {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.detail || "Login failed");
+        throw new Error(formatApiError(data.detail, "Login failed"));
       }
 
       const data = await response.json();

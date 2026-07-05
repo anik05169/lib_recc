@@ -14,6 +14,13 @@ export default function UserLibrary({
 }) {
   const [expandedRecId, setExpandedRecId] = useState(null);
 
+  const handleRemove = (book) => {
+    if (!window.confirm(`Remove "${book.title}" from your collection?`)) {
+      return;
+    }
+    deleteFromLibrary(book.book_id);
+  };
+
   return (
     <ul className="book-list">
       {books.map((book) => (
@@ -32,7 +39,7 @@ export default function UserLibrary({
 
             <button
               className="btn-danger"
-              onClick={() => deleteFromLibrary(book.book_id)}
+              onClick={() => handleRemove(book)}
               title="Remove from library"
             >
               Remove

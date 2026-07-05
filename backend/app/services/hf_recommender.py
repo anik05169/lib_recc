@@ -6,12 +6,22 @@ HF_API_KEY = os.getenv("HF_API_KEY")
 
 API_URL = "https://router.huggingface.co/v1/chat/completions"
 
-HEADERS = {
-    "Authorization": f"Bearer {HF_API_KEY}",
-    "Content-Type": "application/json",
-}
+REQUEST_TIMEOUT = 30
+
+
+class HFNotConfiguredError(Exception):
+    """Raised when HF_API_KEY is not set."""
+
 
 def recommend_books_hf(user_description: str):
+    if not HF_API_KEY:
+        raise HFNotConfiguredError("HF_API_KEY is not configured")
+
+    headers = {
+        "Authorization": f"Bearer {HF_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
     payload = {
         "model": "meta-llama/Meta-Llama-3-8B-Instruct",
         "messages": [
@@ -46,7 +56,12 @@ def recommend_books_hf(user_description: str):
         "temperature": 0.2
     }
 
-    response = requests.post(API_URL, headers=HEADERS, json=payload)
+    response = requests.post(
+        API_URL,
+        headers=headers,
+        json=payload,
+        timeout=REQUEST_TIMEOUT,
+    )
 
     if response.status_code != 200:
         response.raise_for_status()

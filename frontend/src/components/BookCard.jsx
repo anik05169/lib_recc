@@ -1,6 +1,6 @@
 //BookCard.jsx
 
-export default function BookCard({ book, children, inLibrary }) {
+export default function BookCard({ book, children, inLibrary, showDescription = true }) {
   return (
     <li className="book-card">
       {inLibrary && (
@@ -19,9 +19,11 @@ export default function BookCard({ book, children, inLibrary }) {
 
         <div className="book-content">
           <strong>{book.title}</strong>
-          <p className="book-description">
-            {book.description || "No description available."}
-          </p>
+          {showDescription && (
+            <p className="book-description">
+              {book.description || "No description available."}
+            </p>
+          )}
         </div>
       </div>
 

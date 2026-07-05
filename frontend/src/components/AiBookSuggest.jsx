@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { API_BASE_URL } from "../api";
+import { getApiBaseUrl, PLACEHOLDER_IMAGE_URL } from "../api";
 import BookCard from "./BookCard";
 
 /* ------------------ Helpers ------------------ */
@@ -41,7 +41,7 @@ export default function AiBookSuggest({ setNewBook, addCustomBook, showToast, ge
     const bookData = {
       title: book.title,
       description: book.description,
-      image_url: book.image_url || "/placeholder.jpg",
+      image_url: book.image_url || PLACEHOLDER_IMAGE_URL,
     };
     setNewBook(bookData);
     addCustomBook(bookData);
@@ -56,7 +56,7 @@ export default function AiBookSuggest({ setNewBook, addCustomBook, showToast, ge
     setAiSuggestions([]);
 
     try {
-      const res = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/books/ai-suggest-new`, {
+      const res = await fetch(`${getApiBaseUrl()}/books/ai-suggest-new`, {
         method: "POST",
         headers: getAuthHeaders ? getAuthHeaders() : { "Content-Type": "application/json" },
         body: JSON.stringify({ description: aiQuery }),
@@ -65,6 +65,11 @@ export default function AiBookSuggest({ setNewBook, addCustomBook, showToast, ge
       if (!res.ok) {
         if (res.status === 401) {
           showToast?.("Please log in to use AI suggestions", "warning");
+          return;
+        }
+        if (res.status === 503) {
+          const data = await res.json().catch(() => ({}));
+          showToast?.(data.detail || "AI suggestions are not configured", "warning");
           return;
         }
         throw new Error(`AI request failed: ${res.status}`);

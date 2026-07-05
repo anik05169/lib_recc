@@ -1,0 +1,63 @@
+# Changelog
+
+## 2026-07-04 — Phases 2–4
+
+### ML (Phase 2)
+- Hybrid recommender: 0.7 content + 0.3 normalized rating
+- TF-IDF uses title + description
+- Global model retrains after admin `POST /books`
+- HF API timeout; 503 when key missing
+
+### Engineering (Phase 3)
+- MongoDB indexes on startup
+- Admin-only `POST /books` and `POST /train` (`is_admin` on user doc)
+- Invalid JWT user id returns 401
+- `backend/tests/` pytest suite
+- `frontend` Vitest + GitHub Actions CI
+
+### UX (Phase 4)
+- Welcome message in header
+- Delete confirmation
+- Catalog search keeps list visible while updating
+- Toast `aria-live`, delete error toasts
+- AbortController on catalog fetch
+
+---
+
+## 2026-07-04 — Phase 0 + Phase 1
+
+### Documentation
+- Added `AGENTS.md`, `handoff.md`, `docs/` (9 files)
+- Rewrote root, backend, and frontend READMEs
+
+### Deploy readiness
+- `GET /health` with `recommender_ready`
+- `backend/Procfile` (Gunicorn, 1 worker)
+- Pinned `requirements.txt`
+- `backend/.env.example`, `frontend/.env.example`
+
+### Bug fixes
+- Catalog search debounce loop and duplicate API loads
+- `res.ok` checks on catalog, ratings, recommendations
+- `BookCard` respects `showDescription`
+- `AiSuggestionRequest` Pydantic validation
+- Regex-escaped catalog search
+- Placeholder image URL (`placehold.co` instead of missing `/placeholder.jpg`)
+- `api.js` graceful handling when `VITE_API_BASE_URL` unset
+- HF recommender returns empty list when `HF_API_KEY` missing
+- AI endpoint wraps errors as 502
+
+### UI
+- Page title set to "Library AI"
+- Configuration screen when env missing
+
+---
+
+## Prior commits (summary)
+
+- JWT secret handling and runtime config validation
+- MongoDB connection error reporting on startup
+- Frontend lint and hook warning fixes
+- Full-stack security, architecture, UX improvements
+
+See git log for details.

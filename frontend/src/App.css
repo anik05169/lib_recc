@@ -29,6 +29,12 @@
   margin: 0;
 }
 
+.header-greeting {
+  margin: 0.35rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
 /* Navigation */
 .nav-tabs {
   display: flex;

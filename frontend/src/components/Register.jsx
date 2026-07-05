@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { API_BASE_URL } from "../api";
+import { formatApiError } from "../utils/apiError";
 import "./Login.css";
 
 function Register({ onRegister, switchToLogin }) {
@@ -28,7 +29,7 @@ function Register({ onRegister, switchToLogin }) {
           const messages = data.detail.map((d) => d.msg || d.message || JSON.stringify(d));
           throw new Error(messages.join(". "));
         }
-        throw new Error(data.detail || "Registration failed");
+        throw new Error(formatApiError(data.detail, "Registration failed"));
       }
 
       await response.json();

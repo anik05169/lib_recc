@@ -1,7 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends, Body
 from app.db.mongo import get_mongo_db
-from app.models.schemas import Rating
+from app.db.ratings_util import get_avg_ratings_map
 from app.core.auth import get_current_user
+from app.services.recommender import set_ratings_map
 
 router = APIRouter(prefix="/ratings", tags=["Ratings"])
 
@@ -30,6 +31,8 @@ def rate_book(
         {"$set": {"user_id": user_id, "book_id": book_id, "rating": rating}},
         upsert=True,
     )
+
+    set_ratings_map(get_avg_ratings_map(db))
 
     return {"message": "Rating saved"}
 

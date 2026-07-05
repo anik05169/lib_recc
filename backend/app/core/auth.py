@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from app.core.config import get_jwt_secret
 from app.db.mongo import get_mongo_db
 from bson import ObjectId
+from bson.errors import InvalidId
 
 # Security settings
 SECRET_KEY = get_jwt_secret()
@@ -53,7 +54,20 @@ def get_user_by_email(email: str):
 def get_user_by_id(user_id: str):
     """Get user from database by user_id."""
     db = get_mongo_db()
-    return db.users.find_one({"_id": ObjectId(user_id)})
+    try:
+        return db.users.find_one({"_id": ObjectId(user_id)})
+    except InvalidId:
+        return None
+
+
+async def require_admin(current_user: dict = Depends(get_current_user)):
+    """Require is_admin flag on user document."""
+    if not current_user.get("is_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
 
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):

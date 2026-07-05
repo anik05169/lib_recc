@@ -37,6 +37,18 @@ class UserLogin(BaseModel):
     password: str
 
 
+class AiSuggestionRequest(BaseModel):
+    description: str
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, v):
+        text = v.strip()
+        if not text:
+            raise ValueError("Description is required")
+        return text
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
