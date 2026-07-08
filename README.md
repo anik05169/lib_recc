@@ -8,7 +8,7 @@ Full-stack personal library with **dual TF-IDF recommenders** and **HuggingFace 
 
 ## Live demo
 
-> Update these after deploying (see [docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md))
+> Update these after deploying — follow [DEPLOY.md](DEPLOY.md) (step-by-step checklist)
 
 | | URL |
 |---|-----|
@@ -27,6 +27,7 @@ Full-stack personal library with **dual TF-IDF recommenders** and **HuggingFace 
 - **Global** similar-book recommendations (catalog TF-IDF)
 - **Per-user** similar-book recommendations (library TF-IDF)
 - AI assistant — natural language → 3 book suggestions (Llama-3 via HuggingFace)
+- Offline recommender evaluation toolkit (`Precision@k`, `Recall@k`, `HitRate@k`, `MRR@k`, `p50/p95` latency)
 
 ---
 
@@ -54,7 +55,15 @@ Open http://localhost:5173
 |-----|---------|
 | [handoff.md](handoff.md) | **Give to another LLM** — full context handoff |
 | [AGENTS.md](AGENTS.md) | Cursor / AI entry point |
+| [DEPLOY.md](DEPLOY.md) | **Deploy checklist + all env vars** |
 | [docs/INDEX.md](docs/INDEX.md) | Documentation hub |
+
+### Recommender stats (resume metrics)
+
+```bash
+cd backend
+python scripts/calc_recommender_stats.py --labels eval/relevance_labels.example.json --k 5 --runs 20
+```
 
 ---
 

@@ -1,0 +1,16 @@
+{
+  "queries": [
+    {
+      "book_id": 1,
+      "relevant": [2, 3, 4]
+    },
+    {
+      "book_id": 2,
+      "relevant": [1, 3]
+    },
+    {
+      "book_id": 3,
+      "relevant": [2, 5]
+    }
+  ]
+}

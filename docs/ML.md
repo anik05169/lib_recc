@@ -8,7 +8,33 @@ Three recommendation paths:
 2. **User library** — separate TF-IDF model per user on their `user_books`
 3. **AI assistant** — HuggingFace Llama-3 via chat completions (natural language → 3 book JSON)
 
-Ratings are **not** used in scoring yet (planned Phase 2 hybrid).
+Ratings are used in **hybrid scoring**: `0.7 * cosine + 0.3 * normalized_rating`.
+
+---
+
+## Evaluation & benchmark toolkit
+
+You can now calculate measurable recommender metrics locally from labeled relevance data:
+
+- `Precision@k`
+- `Recall@k`
+- `HitRate@k`
+- `MRR@k`
+- Latency stats: `mean`, `p50`, `p95` (ms)
+
+Files:
+
+- `backend/scripts/calc_recommender_stats.py`
+- `backend/eval/relevance_labels.example.json`
+
+Run:
+
+```bash
+cd backend
+python scripts/calc_recommender_stats.py --labels eval/relevance_labels.example.json --k 5 --runs 20
+```
+
+Output report is written to `backend/eval/stats_latest.json` by default.
 
 ---
 
@@ -23,9 +49,7 @@ Ratings are **not** used in scoring yet (planned Phase 2 hybrid).
 
 ### Current feature
 
-**Description only** — `df["description"].fillna("")`
-
-Phase 2 plan: use `f"{title} {description}"`.
+**Title + description** — text uses `f"{title} {description}"`.
 
 ### Global model
 

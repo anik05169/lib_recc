@@ -1,5 +1,7 @@
 # Deployment
 
+> **Quick start:** [DEPLOY.md](../DEPLOY.md) — checklist + env var table for copy-paste.
+
 ## Overview
 
 | Component | Platform | Root directory |
@@ -86,6 +88,19 @@ npm run dev
 ```
 
 No Vite proxy — frontend calls backend directly via CORS.
+
+---
+
+## Seed catalog
+
+After first deploy, import books so the catalog and recommender work:
+
+```bash
+cd backend
+python scripts/seed_catalog.py
+```
+
+See [DEPLOY.md](../DEPLOY.md) for mongoimport alternative.
 
 ---
 

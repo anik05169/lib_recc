@@ -1,6 +1,6 @@
 # handoff.md — LLM / developer handoff
 
-**Last updated:** 2026-07-04  
+**Last updated:** 2026-07-08  
 **Project:** Library AI (`lib_recc`) — personal library + book recommendations  
 **GitHub:** https://github.com/anik05169/lib_recc
 
@@ -48,6 +48,16 @@ A portfolio-grade full-stack app for browsing a book catalog, building a persona
 - Vercel `VITE_API_BASE_URL` pointing to deployed API
 - Backend `ALLOWED_ORIGINS` = your Vercel URL
 - Live demo URLs in README (placeholders remain until you deploy)
+
+### New setup/docs updates (2026-07-08)
+- Added `DEPLOY.md` as a single deploy checklist with all env vars in one place
+- Expanded `backend/.env.example` and `frontend/.env.example` with production notes
+- Added `backend/scripts/seed_catalog.py` for first-time catalog import
+- Added `backend/scripts/calc_recommender_stats.py` for offline metrics + latency:
+  - `Precision@k`, `Recall@k`, `HitRate@k`, `MRR@k`
+  - latency `mean`, `p50`, `p95`
+- Added `backend/eval/relevance_labels.example.json` as labeling template
+- Added `railway.toml` for Railway deployment defaults
 
 ---
 
@@ -154,21 +164,20 @@ Detail: [docs/BACKEND.md](docs/BACKEND.md)
 
 See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md). Top items:
 
-1. **No tests / CI** — Phase 3
-2. **No MongoDB indexes** — duplicate `book_id` / email risk — Phase 3
-3. **Ratings not used in recommender** — Phase 2 hybrid scoring
-4. **Global model stale after `POST /books`** — Phase 2
-5. **Any authenticated user can `POST /books` and `POST /train`** — Phase 3 security
-6. **Delete library book — no error toast on failure** — Phase 4
-7. **Monolithic `App.jsx`** — defer unless refactoring
+1. **In-memory recommender tied to single worker** (`-w 1`) — by design
+2. **JWT 30-day expiry, no refresh token flow**
+3. **Public catalog API with login-gated UI** (intentional tradeoff)
+4. **Monolithic `App.jsx`** (maintainability refactor target)
+5. **Potential `book_id` collision under heavy concurrent writes**
 
 ---
 
 ## Recommended next work
 
-- Deploy backend (Render) + frontend (Vercel) — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- Deploy backend (Render/Railway) + frontend (Vercel) — see [DEPLOY.md](DEPLOY.md)
 - Set `is_admin: true` on your MongoDB user for catalog admin endpoints
 - Add live demo URLs to README
+- Add labeled relevance file in `backend/eval/` and run `scripts/calc_recommender_stats.py`
 - Optional: screenshots/GIF for portfolio
 
 ~~Phase 2–4 implementation~~ — completed in codebase; deploy when ready.
@@ -183,6 +192,7 @@ See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md). Top items:
 4. Update README live demo links
 
 Full guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+Quick checklist: [DEPLOY.md](DEPLOY.md)
 
 ---
 

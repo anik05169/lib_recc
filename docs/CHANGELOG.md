@@ -1,5 +1,23 @@
 # Changelog
 
+## 2026-07-08 — Deploy prep + evaluation toolkit
+
+### Deployment
+- Added root `DEPLOY.md` with end-to-end deploy checklist and env var reference
+- Added `railway.toml` for Railway deployment defaults (start command + health check)
+- Expanded `backend/.env.example` and `frontend/.env.example` with production guidance
+- Added `backend/scripts/seed_catalog.py` to seed initial books catalog
+- Added production runtime validation/warnings in `backend/app/core/config.py`
+
+### ML evaluation
+- Added `backend/scripts/calc_recommender_stats.py` for offline recommender metrics:
+  - `Precision@k`, `Recall@k`, `HitRate@k`, `MRR@k`
+  - latency `mean`, `p50`, `p95`
+- Added `backend/eval/relevance_labels.example.json` for labeled relevance inputs
+- Updated ML and backend docs with usage instructions
+
+---
+
 ## 2026-07-04 — Phases 2–4
 
 ### ML (Phase 2)
