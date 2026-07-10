@@ -57,7 +57,7 @@ Copy from `frontend/.env.example`:
 
 ### Single worker rule
 
-**Always use `-w 1`.** The TF-IDF recommender stores state in process memory. Multiple Gunicorn workers each have separate models; recommendations will be inconsistent.
+**Always use `-w 1`.** Pinecone readiness/vector caches and ratings map live in process memory. Multiple Gunicorn workers each have separate caches; recommendations will be inconsistent.
 
 ---
 
@@ -97,8 +97,11 @@ After first deploy, import books so the catalog and recommender work:
 
 ```bash
 cd backend
-python scripts/seed_catalog.py
+python scripts/seed_catalog.py --books-file ../library_db.books.1000.json --force
+python scripts/sync_pinecone_index.py --scope catalog
 ```
+
+Or run GitHub Actions **Sync MongoDB and Pinecone** (1k) or **Catalog benchmark (~9.8k Goodreads)** (~9.8k + latency). See [DEPLOY.md](../DEPLOY.md).
 
 See [DEPLOY.md](../DEPLOY.md) for mongoimport alternative.
 

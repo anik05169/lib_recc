@@ -59,6 +59,11 @@ A portfolio-grade full-stack app for browsing a book catalog, building a persona
 - Added `backend/eval/relevance_labels.example.json` as labeling template
 - Added `railway.toml` for Railway deployment defaults
 
+### Catalog benchmark CI (2026-07-10)
+- `fetch_goodreads_catalog.py` + `run_catalog_benchmark.py` for ~9.8k Goodreads pipeline
+- GitHub Actions: **Catalog benchmark (~9.8k Goodreads)** (manual) + updated **Sync MongoDB and Pinecone** (1k)
+- Pinecone in-process caching; latency reports with timing visualization in `benchmark_report.md`
+
 ---
 
 ## How to run locally

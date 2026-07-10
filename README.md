@@ -1,8 +1,8 @@
 # Library AI
 
-Full-stack personal library with **dual TF-IDF recommenders** and **HuggingFace AI** book suggestions.
+Full-stack personal library with **Pinecone vector recommendations** and **HuggingFace AI** book suggestions.
 
-**React 19 · FastAPI · MongoDB · Custom ML (no scikit-learn)**
+**React 19 · FastAPI · MongoDB · Pinecone · Sentence embeddings**
 
 ---
 
@@ -24,8 +24,8 @@ Full-stack personal library with **dual TF-IDF recommenders** and **HuggingFace 
 - Paginated book catalog with search
 - Personal library (collect from catalog or add custom books)
 - 1–5 star ratings with aggregate scores
-- **Global** similar-book recommendations (catalog TF-IDF or embeddings)
-- **Per-user** similar-book recommendations (library TF-IDF or embeddings)
+- **Global** similar-book recommendations (Pinecone embeddings + hybrid ratings)
+- **Per-user** similar-book recommendations (per-user Pinecone namespace)
 - AI assistant — natural language → 3 book suggestions (Llama-3 via HuggingFace)
 - Offline recommender evaluation toolkit (`Precision@k`, `Recall@k`, `HitRate@k`, `MRR@k`, `p50/p95` latency)
 
@@ -58,12 +58,19 @@ Open http://localhost:5173
 | [DEPLOY.md](DEPLOY.md) | **Deploy checklist + all env vars** |
 | [docs/INDEX.md](docs/INDEX.md) | Documentation hub |
 
-### Recommender stats (resume metrics)
+### Recommender stats & benchmarks
 
+**Local (1k catalog):**
 ```bash
 cd backend
-python scripts/calc_recommender_stats.py --labels eval/relevance_labels.example.json --k 5 --runs 20
+pip install -r requirements.txt -r requirements-embeddings.txt
+python scripts/sync_pinecone_index.py --scope catalog
+python scripts/calc_recommender_stats.py --labels eval/relevance_labels.example.json --k 5 --runs 20 --skip-train
 ```
+
+**GitHub Actions (~9.8k Goodreads + latency reports):**  
+Actions → **Catalog benchmark (~9.8k Goodreads)** → Run workflow  
+See [DEPLOY.md](DEPLOY.md) for secrets, timing estimates, and artifact download.
 
 ---
 
@@ -74,7 +81,7 @@ python scripts/calc_recommender_stats.py --labels eval/relevance_labels.example.
 | Frontend | React 19, Vite, fetch |
 | Backend | FastAPI, pymongo, pandas |
 | Database | MongoDB Atlas |
-| ML | Custom TF-IDF + cosine similarity |
+| ML | Sentence embeddings (MiniLM) + Pinecone |
 | AI | HuggingFace Inference (Meta-Llama-3-8B-Instruct) |
 | Auth | JWT, pbkdf2_sha256 |
 

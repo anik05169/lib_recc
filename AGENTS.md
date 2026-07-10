@@ -4,7 +4,7 @@ Read this file first before editing `lib_recc`.
 
 ## 30-second summary
 
-**Library AI** is a full-stack book library app: React 19 + Vite frontend, FastAPI + MongoDB backend, dual TF-IDF recommenders (global catalog + per-user library), 1–5 star ratings, and HuggingFace Llama-3 AI book suggestions.
+**Library AI** is a full-stack book library app: React 19 + Vite frontend, FastAPI + MongoDB backend, Pinecone vector recommendations (global catalog + per-user library), 1–5 star ratings, and HuggingFace Llama-3 AI book suggestions.
 
 Repo: `anik05169/lib_recc` on GitHub. Frontend targets Vercel; backend targets Render/Railway.
 
@@ -48,7 +48,7 @@ See `backend/.env.example` and `frontend/.env.example`.
 ## Do NOT break these constraints
 
 1. **Single Gunicorn worker** — recommender state lives in process memory (`backend/Procfile` uses `-w 1`). Multiple workers = stale/empty models.
-2. **In-memory models** — global `_books_df` and per-user `_user_models` reset on restart. Training runs in a daemon thread at startup (`backend/app/startup.py`).
+2. **In-memory Pinecone caches** — readiness, vector counts, and embeddings cached in-process (`pinecone_store.py`). Single Gunicorn worker required (`-w 1`).
 3. **Login required for UI** — catalog is only shown after JWT login (API catalog endpoints are public).
 4. **Custom books stay private** — `POST /user/add-custom-book` does not add to global `books` collection.
 5. **Ratings require library membership** — enforced in `backend/app/routes/ratings.py`.
@@ -60,6 +60,8 @@ See `backend/.env.example` and `frontend/.env.example`.
 | Fix deploy / CORS | `docs/DEPLOYMENT.md` |
 | Add API endpoint | `docs/API.md`, `backend/app/routes/` |
 | Change recommender | `docs/ML.md`, `backend/app/services/recommender.py` |
+| Seed/sync 1k catalog (CI) | `DEPLOY.md`, `.github/workflows/sync-data.yml` |
+| Benchmark ~9.8k + latency (CI) | `DEPLOY.md`, `.github/workflows/catalog-benchmark.yml` |
 | Frontend bug | `docs/FRONTEND.md`, `frontend/src/App.jsx` |
 | New env var | Both `.env.example` files + `docs/DEPLOYMENT.md` |
 

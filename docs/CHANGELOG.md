@@ -1,5 +1,25 @@
 # Changelog
 
+## 2026-07-10 — Pinecone caching, ~9.8k benchmark CI
+
+### ML / performance
+- In-memory Pinecone caches in `pinecone_store.py` (readiness, counts, seed vectors)
+- `get_namespace_vector_count()` falls back to `warm_namespace_cache()` when cache is cold (fixes CI verify step)
+- Recommendation latency ~700 ms → ~300 ms on 1k catalog (in-process + API)
+
+### Scripts & data
+- `fetch_goodreads_catalog.py` — download goodbooks-10k (~9,778 unique English books)
+- `run_catalog_benchmark.py` — full pipeline with per-step timing + JSON/Markdown reports
+- `csv_to_books_json.py` — `--limit 0` exports all unique English titles from CSV
+- `calc_recommender_stats.py` — `--skip-train` to benchmark after sync without re-encoding
+
+### CI
+- `.github/workflows/catalog-benchmark.yml` — manual ~9.8k fetch/seed/sync/latency (~15–18 min)
+- `.github/workflows/sync-data.yml` — 1k seed/sync; verify uses `warm_namespace_cache()`
+- `.gitignore` — `.cache/`, generated catalogs, benchmark artifacts
+
+---
+
 ## 2026-07-08 — Deploy prep + evaluation toolkit
 
 ### Deployment

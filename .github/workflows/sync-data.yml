@@ -8,13 +8,6 @@ on:
         required: false
         default: true
         type: boolean
-  push:
-    branches: [main]
-    paths:
-      - "library_db.books*.json"
-      - "backend/scripts/seed_catalog.py"
-      - "backend/scripts/sync_pinecone_index.py"
-      - ".github/workflows/sync-data.yml"
 
 concurrency:
   group: sync-data-${{ github.ref }}
@@ -67,7 +60,7 @@ jobs:
       - name: Seed MongoDB catalog
         run: |
           ARGS="--books-file library_db.books.1000.json"
-          if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.force_reseed }}" = "true" ]; then
+          if [ "${{ inputs.force_reseed }}" = "true" ]; then
             ARGS="$ARGS --force"
           fi
           python scripts/seed_catalog.py $ARGS

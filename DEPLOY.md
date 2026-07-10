@@ -135,7 +135,9 @@ Replace placeholder URLs in root `README.md` with your live frontend + API + hea
 
 Workflow: [`.github/workflows/sync-data.yml`](.github/workflows/sync-data.yml)
 
-Runs on **manual dispatch** or when `library_db.books*.json` changes on `main`.
+Runs on **manual dispatch only** (does not run on push).
+
+**Catalog size:** **1,000 books** from `library_db.books.1000.json` (~3 min after caches warm).
 
 ### Repository secrets (Settings → Secrets and variables → Actions)
 
@@ -156,9 +158,36 @@ GitHub → **Actions** → **Sync MongoDB and Pinecone** → **Run workflow**
 Steps performed:
 1. `seed_catalog.py --force` → loads `library_db.books.1000.json` into MongoDB
 2. `sync_pinecone_index.py --scope catalog` → encodes + upserts 1000 vectors to Pinecone
-3. Verifies `catalog_vector_count >= 100`
+3. `warm_namespace_cache()` + verifies `catalog_vector_count >= 100`
 
-First run may take **15–30 minutes** (torch + MiniLM model download). Later runs are faster with pip/HF cache.
+First run may take **~5–10 minutes** (pip + torch + MiniLM download). Later runs ~**3 minutes** with pip/HF cache.
+
+---
+
+## GitHub Actions — ~9.8k catalog benchmark + latency
+
+Workflow: [`.github/workflows/catalog-benchmark.yml`](.github/workflows/catalog-benchmark.yml)
+
+**Manual only** — does not run on push.
+
+GitHub → **Actions** → **Catalog benchmark (~9.8k Goodreads)** → **Run workflow**
+
+| Input | Default | Purpose |
+|-------|---------|---------|
+| `runs` | `20` | Latency samples per query book ID |
+| `skip_api` | `false` | Set `true` to skip uvicorn API benchmark |
+
+Steps performed:
+1. `fetch_goodreads_catalog.py` → downloads goodbooks-10k (~9,778 unique English books)
+2. `seed_catalog.py --force` → MongoDB
+3. `sync_pinecone_index.py` → Pinecone (~8 min encode step)
+4. `calc_recommender_stats.py --skip-train` → in-process latency
+5. uvicorn + `benchmark_api_latency.py` → API latency (unless `skip_api`)
+6. Uploads artifacts: `benchmark_report.json`, `benchmark_report.md`, stats files
+
+**Estimated CI time:** ~15–18 min cold, ~12–15 min warm HF cache. Reports include timing bars and CI estimates.
+
+Same secrets as sync workflow. Do **not** commit `.cache/` or generated `library_db.books.goodreads.json` (see `.gitignore`).
 
 ---
 
@@ -186,7 +215,10 @@ First run may take **15–30 minutes** (torch + MiniLM model download). Later ru
 | `frontend/vercel.json` | SPA rewrites + security headers |
 | `backend/scripts/seed_catalog.py` | Import seed books |
 | `backend/scripts/sync_pinecone_index.py` | Encode + upsert vectors to Pinecone |
-| `.github/workflows/sync-data.yml` | CI: Mongo seed + Pinecone sync |
+| `backend/scripts/run_catalog_benchmark.py` | ~9.8k fetch + seed + sync + latency reports |
+| `backend/scripts/fetch_goodreads_catalog.py` | Download goodbooks-10k → seed JSON |
+| `.github/workflows/sync-data.yml` | CI: 1k Mongo seed + Pinecone sync |
+| `.github/workflows/catalog-benchmark.yml` | CI: ~9.8k catalog + latency benchmark |
 | `backend/.env.example` | Backend env template |
 | `frontend/.env.example` | Frontend env template |
 
