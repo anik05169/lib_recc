@@ -4,123 +4,87 @@
 
 Three recommendation paths:
 
-1. **Global catalog** — TF-IDF + cosine similarity on all `books`
-2. **User library** — separate TF-IDF model per user on their `user_books`
+1. **Global catalog** — sentence embeddings in **Pinecone** + ANN query + hybrid re-rank
+2. **User library** — per-user Pinecone namespace on `user_books`
 3. **AI assistant** — HuggingFace Llama-3 via chat completions (natural language → 3 book JSON)
 
 Ratings are used in **hybrid scoring**: `0.7 * cosine + 0.3 * normalized_rating`.
+
+MongoDB remains the source of truth for catalog, library, and ratings. Pinecone stores vectors only.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+  mongo[MongoDB] --> sync[sync_pinecone_index.py]
+  sync --> encoder[embedding_service]
+  encoder --> pinecone[Pinecone]
+  api[FastAPI] --> pinecone
+  api --> mongo
+```
+
+- **Index sync** (local/CI): `scripts/sync_pinecone_index.py` encodes `title + description` with `all-MiniLM-L6-v2` (384-dim) and upserts to Pinecone
+- **API hot path**: fetch seed vector → Pinecone query → hybrid re-rank with cached ratings → hydrate book metadata from MongoDB
+- **Production Render**: set `SKIP_EMBEDDING_SYNC=true`; run sync script separately (no torch on API server)
+
+Namespaces: `catalog` (global), `user_{user_id}` (private library).
 
 ---
 
 ## Evaluation & benchmark toolkit
 
-You can now calculate measurable recommender metrics locally from labeled relevance data:
-
-- `Precision@k`
-- `Recall@k`
-- `HitRate@k`
-- `MRR@k`
-- Latency stats: `mean`, `p50`, `p95` (ms)
-
-Files:
-
-- `backend/scripts/calc_recommender_stats.py`
-- `backend/eval/relevance_labels.example.json`
-
-Run:
+Metrics: `Precision@k`, `Recall@k`, `HitRate@k`, `MRR@k`, latency `mean/p50/p95`.
 
 ```bash
 cd backend
+pip install -r requirements-embeddings.txt   # for encoding during sync/eval
+python scripts/sync_pinecone_index.py --scope catalog
 python scripts/calc_recommender_stats.py --labels eval/relevance_labels.example.json --k 5 --runs 20
+python scripts/benchmark_api_latency.py --labels eval/relevance_labels.example.json --wait-health
 ```
 
-Output report is written to `backend/eval/stats_latest.json` by default.
+Offline eval (no Pinecone account):
 
----
-
-## Content-based recommender (`backend/app/services/recommender.py`)
-
-### Algorithm
-
-1. Tokenize text: lowercase alpha words from `split()`
-2. Build TF-IDF matrix (custom implementation, no scikit-learn)
-3. Compute pairwise cosine similarity (O(n²) matrix)
-4. For query `book_id`, return top 5 similar books (excluding self)
-
-### Current feature
-
-**Title + description** — text uses `f"{title} {description}"`.
-
-### Global model
-
-| Variable | Purpose |
-|----------|---------|
-| `_books_df` | pandas DataFrame of all catalog books |
-| `_similarity` | n×n cosine matrix |
-
-**Train triggers:**
-- App startup (`startup.py` daemon thread)
-- Manual `POST /train` (JWT, no UI)
-
-**Not retrained** when `POST /books` adds to catalog (known issue — Phase 2).
-
-### Per-user model
-
-| Variable | Purpose |
-|----------|---------|
-| `_user_models[user_id]` | `{ "df", "similarity" }` |
-
-**Train triggers:**
-- `POST /user/add-from-catalog`
-- `POST /user/add-custom-book`
-- `DELETE /user/library/{book_id}`
-
-**Lazy train:** `recommend_user()` trains if model missing and `user_books` passed.
-
-### Thread safety
-
-`_lock` threading.Lock wraps read/write of global and user models.
-
-### Health check
-
-`is_model_ready()` → `_books_df is not None`  
-Exposed via `GET /health`.
-
----
-
-## HuggingFace AI (`backend/app/services/hf_recommender.py`)
-
-| Setting | Value |
-|---------|-------|
-| Model | `meta-llama/Meta-Llama-3-8B-Instruct` |
-| API | `https://router.huggingface.co/v1/chat/completions` |
-| Env | `HF_API_KEY` |
-
-Returns strict JSON: `{ recommendations: [{ title, author, description }] }` (exactly 3).
-
-If `HF_API_KEY` missing → `{ recommendations: [] }` (no error).
-
-Frontend enriches with Google Books cover images (`AiBookSuggest.jsx`).
-
-Phase 2 plan: `timeout=30` on requests; 503 when key missing.
-
----
-
-## Planned: hybrid scoring (Phase 2)
-
-```
-final_score = 0.7 * cosine_similarity + 0.3 * normalized_avg_rating
+```bash
+python scripts/calc_recommender_stats.py --labels eval/relevance_labels.example.json --books-file ../library_db.books.json --offline
 ```
 
-Requires loading `GET /ratings/average` aggregates at train or recommend time.
+---
+
+## Key modules
+
+| Module | Role |
+|--------|------|
+| `app/services/embedding_service.py` | HF encoder (sync time only) |
+| `app/services/pinecone_store.py` | Pinecone upsert/query/fetch |
+| `app/services/vector_sync.py` | Mongo books → Pinecone vectors |
+| `app/services/vector_recommender.py` | Query + hybrid re-rank |
+| `app/services/recommender.py` | Public facade for routes |
+
+### Train / sync triggers
+
+- Startup: cache ratings + optional catalog sync (unless `SKIP_EMBEDDING_SYNC`)
+- `POST /train` (admin): full catalog re-sync
+- `POST /books` (admin): upsert single book vector
+- User library add/remove: re-sync `user_{id}` namespace
 
 ---
 
-## Interview talking points
+## Environment
 
-- Custom TF-IDF keeps dependencies light (pandas only for DataFrame indexing)
-- Dual models separate public catalog discovery from private library taste
-- LLM handles cold-start / natural language; TF-IDF handles "similar to this book"
-- In-memory tradeoff: fast, simple, but single-worker deploy and restart clears models
+```env
+PINECONE_API_KEY=
+PINECONE_INDEX_NAME=libra-books
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+SKIP_EMBEDDING_SYNC=true          # production API
+```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for system diagram.
+Create Pinecone index: **384 dimensions**, **cosine** metric.
+
+---
+
+## AI suggestions (`hf_recommender.py`)
+
+Unchanged — uses `HF_API_KEY` for Llama-3 chat completions, separate from embedding retrieval.

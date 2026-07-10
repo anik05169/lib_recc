@@ -23,6 +23,9 @@ Use this when deploying to **MongoDB Atlas + Render (or Railway) + Vercel**.
 | `JWT_SECRET` | **Yes** | Random string — e.g. `openssl rand -hex 32` |
 | `ALLOWED_ORIGINS` | **Yes (prod)** | `https://your-app.vercel.app` — exact URL, no trailing slash |
 | `HF_API_KEY` | No | HuggingFace token — AI suggestions need this |
+| `PINECONE_API_KEY` | **Yes (recommendations)** | From Pinecone console |
+| `PINECONE_INDEX_NAME` | **Yes** | e.g. `librasense` — 384 dims, cosine |
+| `SKIP_EMBEDDING_SYNC` | **Yes on Render** | `true` — sync runs in GitHub Actions instead |
 | `FRONTEND_URL` | No | Alternative to `ALLOWED_ORIGINS` (single URL) |
 
 **Start command (must use 1 worker):**
@@ -128,13 +131,44 @@ Replace placeholder URLs in root `README.md` with your live frontend + API + hea
 
 ---
 
+## GitHub Actions — MongoDB seed + Pinecone sync
+
+Workflow: [`.github/workflows/sync-data.yml`](.github/workflows/sync-data.yml)
+
+Runs on **manual dispatch** or when `library_db.books*.json` changes on `main`.
+
+### Repository secrets (Settings → Secrets and variables → Actions)
+
+| Secret | Value |
+|--------|--------|
+| `MONGODB_URI` | Same Atlas connection string as production |
+| `PINECONE_API_KEY` | Pinecone API key |
+| `PINECONE_INDEX_NAME` | e.g. `librasense` |
+
+### Atlas network access
+
+GitHub Actions runners use dynamic IPs. Allow **`0.0.0.0/0`** in Atlas Network Access (or re-run when a run fails with connection timeout).
+
+### Manual run
+
+GitHub → **Actions** → **Sync MongoDB and Pinecone** → **Run workflow**
+
+Steps performed:
+1. `seed_catalog.py --force` → loads `library_db.books.1000.json` into MongoDB
+2. `sync_pinecone_index.py --scope catalog` → encodes + upserts 1000 vectors to Pinecone
+3. Verifies `catalog_vector_count >= 100`
+
+First run may take **15–30 minutes** (torch + MiniLM model download). Later runs are faster with pip/HF cache.
+
+---
+
 ## Common failures
 
 | Symptom | Fix |
 |---------|-----|
 | CORS error in browser | `ALLOWED_ORIGINS` = exact Vercel URL |
 | Config screen / blank app | `VITE_API_BASE_URL` set in Vercel, redeploy |
-| `recommender_ready: false` forever | Seed books; check MongoDB connection / IP whitelist |
+| `recommender_ready: false` forever | Run GitHub Actions **Sync MongoDB and Pinecone**; check Pinecone secrets |
 | AI returns nothing | Set `HF_API_KEY` on backend |
 | 401 everywhere | New deploy changed `JWT_SECRET` — log in again |
 | Render slow first load | Free tier cold start (~30–60s) — normal |
@@ -151,6 +185,8 @@ Replace placeholder URLs in root `README.md` with your live frontend + API + hea
 | `backend/runtime.txt` | Python 3.11.9 |
 | `frontend/vercel.json` | SPA rewrites + security headers |
 | `backend/scripts/seed_catalog.py` | Import seed books |
+| `backend/scripts/sync_pinecone_index.py` | Encode + upsert vectors to Pinecone |
+| `.github/workflows/sync-data.yml` | CI: Mongo seed + Pinecone sync |
 | `backend/.env.example` | Backend env template |
 | `frontend/.env.example` | Frontend env template |
 

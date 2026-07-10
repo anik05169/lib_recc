@@ -60,16 +60,6 @@ def get_user_by_id(user_id: str):
         return None
 
 
-async def require_admin(current_user: dict = Depends(get_current_user)):
-    """Require is_admin flag on user document."""
-    if not current_user.get("is_admin"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required",
-        )
-    return current_user
-
-
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     """Get the current authenticated user from JWT token."""
     credentials_exception = HTTPException(
@@ -90,3 +80,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
     
     return user
+
+
+async def require_admin(current_user: dict = Depends(get_current_user)):
+    """Require is_admin flag on user document."""
+    if not current_user.get("is_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user

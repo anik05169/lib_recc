@@ -1,0 +1,25 @@
+{
+  "config": {
+    "k": 5,
+    "runs": 5,
+    "labels_file": "C:\\Users\\Lenovo\\Downloads\\OneDrive\\Desktop\\clg main\\ml\\projecc\\lib_recc\\backend\\eval\\relevance_labels.example.json",
+    "mode": "embeddings",
+    "data_source": "C:\\Users\\Lenovo\\Downloads\\OneDrive\\Desktop\\clg main\\ml\\projecc\\lib_recc\\library_db.books.json"
+  },
+  "quality": {
+    "precision_at_k": 0.20000000000000004,
+    "recall_at_k": 0.4444444444444444,
+    "hit_rate_at_k": 1.0,
+    "mrr_at_k": 0.27777777777777773,
+    "evaluated_queries": 3,
+    "skipped_queries": 0
+  },
+  "latency_ms": {
+    "samples": 15,
+    "mean_ms": 2.1713733362654843,
+    "p50_ms": 2.2117000189609826,
+    "p95_ms": 2.486039989162236,
+    "min_ms": 1.9062000210396945,
+    "max_ms": 2.743499993812293
+  }
+}

@@ -8,9 +8,12 @@ from app.db.ratings_util import get_avg_ratings_map
 from app.models.schemas import AiSuggestionRequest, Book
 from app.services.recommender import (
     DEFAULT_PLACEHOLDER_IMAGE,
+    get_ratings_map,
     is_model_ready,
     recommend,
+    set_ratings_map,
     train_model,
+    upsert_book,
 )
 from app.services.hf_recommender import HFNotConfiguredError, recommend_books_hf
 from app.core.auth import get_current_user, require_admin
@@ -58,9 +61,9 @@ def add_book(book: Book, _admin: dict = Depends(require_admin)):
         book_data["book_id"] = int(time.time() * 1000) % 10_000_000
     db.books.insert_one(book_data)
 
-    books = list(db.books.find({}, {"_id": 0}))
     ratings_map = get_avg_ratings_map(db)
-    train_model(books, ratings_map)
+    upsert_book(book_data)
+    set_ratings_map(ratings_map)
 
     return {"status": "ok", "book_id": book_data["book_id"]}
 
@@ -72,8 +75,7 @@ def recommend_books(book_id: int):
             status_code=503,
             detail="Recommender model is not ready yet",
         )
-    db = get_mongo_db()
-    ratings_map = get_avg_ratings_map(db)
+    ratings_map = get_ratings_map()
     result = recommend(book_id, ratings_map=ratings_map)
     if result is None:
         raise HTTPException(

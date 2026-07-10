@@ -23,8 +23,29 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 from app.db.mongo import get_mongo_db  # noqa: E402
 
 
-def load_seed_books() -> list[dict]:
-    seed_path = Path(__file__).resolve().parents[2] / "library_db.books.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+
+
+def resolve_books_path(books_file: str | None) -> Path:
+    if books_file:
+        path = Path(books_file)
+        if not path.is_absolute():
+            path = (REPO_ROOT / path).resolve()
+        return path
+
+    for name in ("library_db.books.1000.json", "library_db.books.json"):
+        candidate = REPO_ROOT / name
+        if candidate.exists():
+            return candidate
+
+    raise FileNotFoundError(
+        "No seed file found. Pass --books-file or add library_db.books.1000.json to the repo root."
+    )
+
+
+def load_seed_books(books_file: str | None = None) -> list[dict]:
+    seed_path = resolve_books_path(books_file)
     if not seed_path.exists():
         raise FileNotFoundError(f"Seed file not found: {seed_path}")
 
@@ -45,6 +66,11 @@ def main() -> int:
         action="store_true",
         help="Delete existing books and re-import seed data",
     )
+    parser.add_argument(
+        "--books-file",
+        default="",
+        help="Path to books JSON (default: library_db.books.1000.json or library_db.books.json)",
+    )
     args = parser.parse_args()
 
     db = get_mongo_db()
@@ -54,7 +80,7 @@ def main() -> int:
         print(f"Catalog already has {existing} books. Use --force to replace.")
         return 0
 
-    books = load_seed_books()
+    books = load_seed_books(args.books_file or None)
     if args.force and existing:
         db.books.delete_many({})
         print(f"Removed {existing} existing books.")

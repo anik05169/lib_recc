@@ -1,27 +1,34 @@
 from app.db.mongo import get_mongo_db
 from app.db.ratings_util import get_avg_ratings_map
-from app.services.recommender import train_model
+from app.services.recommender import set_ratings_map, train_model
 from pymongo.errors import ConfigurationError, ServerSelectionTimeoutError
 
 
 def train_recommender_on_startup():
-    """Train recommender once when FastAPI starts."""
+    """Load ratings cache and sync catalog vectors to Pinecone on startup."""
     try:
         db = get_mongo_db()
         books = list(db.books.find({}, {"_id": 0}))
 
+        ratings_map = get_avg_ratings_map(db)
+        set_ratings_map(ratings_map)
+
         if not books:
-            print("No books found. Recommender not trained.")
+            print("No books found. Pinecone catalog not synced.")
             return
 
-        ratings_map = get_avg_ratings_map(db)
-        train_model(books, ratings_map)
-        print(f"Recommender trained on startup with {len(books)} books")
+        synced = train_model(books, ratings_map)
+        print(f"Startup: ratings cached; {synced} catalog vectors synced to Pinecone")
+        if synced == 0:
+            print(
+                "Hint: SKIP_EMBEDDING_SYNC is set or sync returned 0. "
+                "Run scripts/sync_pinecone_index.py to populate Pinecone."
+            )
     except ServerSelectionTimeoutError:
-        print("Could not connect to MongoDB. Recommender not trained.")
+        print("Could not connect to MongoDB. Recommender not initialized.")
         print("Hint: Check if your IP address is whitelisted in MongoDB Atlas.")
     except ConfigurationError as e:
-        print("MongoDB configuration error. Recommender not trained.")
+        print("MongoDB configuration error. Recommender not initialized.")
         print(f"Details: {e}")
     except Exception as e:
         print(f"Error during recommender startup: {e}")

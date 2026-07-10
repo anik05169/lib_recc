@@ -1,14 +1,48 @@
+import os
+
 import pytest
+
+from app.services import pinecone_store
 from app.services import recommender as rec
 
 
 @pytest.fixture(autouse=True)
-def reset_model():
-    rec._books_df = None
-    rec._similarity = None
-    rec._ratings_map = {}
-    rec._user_models = {}
+def reset_model(monkeypatch):
+    os.environ["PINECONE_DISABLED"] = "true"
+    os.environ.pop("SKIP_EMBEDDING_SYNC", None)
+    pinecone_store.reset_test_store()
+    rec.set_ratings_map({})
     yield
+
+
+def _fake_encode(texts: list[str]) -> list[list[float]]:
+    vectors = []
+    for text in texts:
+        t = text.lower()
+        if "space" in t or "galaxy" in t or "astronaut" in t:
+            vectors.append([0.0, 0.0, 1.0])
+        elif "dark" in t:
+            vectors.append([0.95, 0.05, 0.0])
+        else:
+            vectors.append([1.0, 0.0, 0.0])
+    return vectors
+
+
+@pytest.fixture(autouse=True)
+def patch_hydrate(monkeypatch):
+    def _hydrate(book_ids):
+        all_books = SAMPLE_BOOKS
+        return {b["book_id"]: b for b in all_books if b["book_id"] in book_ids}
+
+    monkeypatch.setattr("app.services.vector_recommender._hydrate_books", _hydrate)
+
+
+@pytest.fixture(autouse=True)
+def patch_encoder(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.vector_sync.encode_texts",
+        _fake_encode,
+    )
 
 
 SAMPLE_BOOKS = [

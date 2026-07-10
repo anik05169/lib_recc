@@ -1,0 +1,31 @@
+{
+  "config": {
+    "base_url": "http://localhost:8000",
+    "book_ids": [
+      1,
+      2,
+      3
+    ],
+    "runs": 20,
+    "warmup": 3,
+    "endpoint": "/recommend/{book_id}",
+    "data_source": "mongodb://localhost:27017/",
+    "recommender_mode": "tfidf"
+  },
+  "health": {
+    "status": "ok",
+    "recommender_ready": true
+  },
+  "latency_ms": {
+    "samples": 60,
+    "errors": 0,
+    "status_counts": {
+      "200": 60
+    },
+    "mean_ms": 2061.475733334373,
+    "p50_ms": 2061.048949995893,
+    "p95_ms": 2089.4841349771013,
+    "min_ms": 2039.2162000061944,
+    "max_ms": 2102.986299985787
+  }
+}

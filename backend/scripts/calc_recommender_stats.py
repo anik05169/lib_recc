@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import statistics
 import sys
 import time
@@ -55,6 +56,16 @@ def _parse_args() -> argparse.Namespace:
         "--output",
         default="eval/stats_latest.json",
         help="Where to save JSON report (default: eval/stats_latest.json)",
+    )
+    parser.add_argument(
+        "--books-file",
+        default="",
+        help="Optional path to books JSON array (fallback when MongoDB is unavailable)",
+    )
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Use in-memory Pinecone test store (PINECONE_DISABLED) for offline eval",
     )
     return parser.parse_args()
 
@@ -189,13 +200,34 @@ def main() -> int:
     if args.runs <= 0:
         raise ValueError("--runs must be > 0")
 
-    queries = _load_labels(labels_path)
-    db = get_mongo_db()
-    books = list(db.books.find({}, {"_id": 0}))
-    if not books:
-        raise RuntimeError("No books in catalog. Seed books before running stats.")
+    if args.offline or args.books_file:
+        os.environ["PINECONE_DISABLED"] = "true"
+    os.environ.pop("SKIP_EMBEDDING_SYNC", None)
 
-    ratings_map = get_avg_ratings_map(db)
+    queries = _load_labels(labels_path)
+    books = []
+    ratings_map = {}
+    data_source = "mongodb"
+
+    if args.books_file:
+        books_path = (BACKEND_DIR / args.books_file).resolve() if not Path(args.books_file).is_absolute() else Path(args.books_file)
+        if not books_path.exists():
+            raise FileNotFoundError(f"Books file not found: {books_path}")
+        with books_path.open(encoding="utf-8") as f:
+            raw_books = json.load(f)
+        if not isinstance(raw_books, list):
+            raise ValueError("Books file must contain a JSON array")
+        books = [{k: v for k, v in b.items() if k != "_id"} for b in raw_books if isinstance(b, dict)]
+        data_source = str(books_path)
+    else:
+        db = get_mongo_db()
+        books = list(db.books.find({}, {"_id": 0}))
+        ratings_map = get_avg_ratings_map(db)
+        data_source = "mongodb"
+
+    if not books:
+        raise RuntimeError("No books found. Seed catalog or pass --books-file.")
+
     train_model(books, ratings_map)
 
     quality = _evaluate_quality(queries, ratings_map, args.k)
@@ -206,6 +238,9 @@ def main() -> int:
             "k": args.k,
             "runs": args.runs,
             "labels_file": str(labels_path),
+            "backend": "pinecone",
+            "offline": bool(args.offline or args.books_file),
+            "data_source": data_source,
         },
         "quality": quality,
         "latency_ms": latency,

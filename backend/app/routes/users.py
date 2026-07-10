@@ -4,7 +4,7 @@ from app.db.mongo import get_mongo_db
 from app.db.ratings_util import get_avg_ratings_map
 from app.models.schemas import Book
 from app.core.auth import get_current_user
-from app.services.recommender import train_user_model, recommend_user
+from app.services.recommender import train_user_model, recommend_user, get_ratings_map
 
 router = APIRouter(prefix="/user", tags=["Users"])
 
@@ -104,7 +104,7 @@ def get_user_recommendations(
     user_id = str(current_user["_id"])
 
     user_books = list(db.user_books.find({"user_id": user_id}, {"_id": 0}))
-    ratings_map = get_avg_ratings_map(db)
+    ratings_map = get_ratings_map()
     recommendations = recommend_user(
         user_id,
         book_id,

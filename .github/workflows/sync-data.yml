@@ -1,0 +1,86 @@
+name: Sync MongoDB and Pinecone
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_reseed:
+        description: "Replace existing MongoDB catalog before import"
+        required: false
+        default: true
+        type: boolean
+  push:
+    branches: [main]
+    paths:
+      - "library_db.books*.json"
+      - "backend/scripts/seed_catalog.py"
+      - "backend/scripts/sync_pinecone_index.py"
+      - ".github/workflows/sync-data.yml"
+
+concurrency:
+  group: sync-data-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  seed-and-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+      PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+      EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      HF_HOME: ${{ github.workspace }}/.cache/huggingface
+      TRANSFORMERS_CACHE: ${{ github.workspace }}/.cache/huggingface
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-embeddings.txt
+
+      - name: Cache HuggingFace model
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/huggingface
+          key: hf-minilm-${{ hashFiles('backend/requirements-embeddings.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-embeddings.txt
+
+      - name: Validate secrets
+        run: |
+          test -n "$MONGODB_URI" || (echo "Missing MONGODB_URI secret" && exit 1)
+          test -n "$PINECONE_API_KEY" || (echo "Missing PINECONE_API_KEY secret" && exit 1)
+          test -n "$PINECONE_INDEX_NAME" || (echo "Missing PINECONE_INDEX_NAME secret" && exit 1)
+
+      - name: Seed MongoDB catalog
+        run: |
+          ARGS="--books-file ../library_db.books.1000.json"
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.force_reseed }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+          python scripts/seed_catalog.py $ARGS
+
+      - name: Sync embeddings to Pinecone
+        run: python scripts/sync_pinecone_index.py --scope catalog
+
+      - name: Verify Pinecone index
+        run: |
+          python - <<'PY'
+          from app.services import pinecone_store
+          count = pinecone_store.get_namespace_vector_count(pinecone_store.CATALOG_NAMESPACE)
+          print(f"catalog_vector_count={count}")
+          if count < 100:
+              raise SystemExit(f"Expected at least 100 vectors, got {count}")
+          PY

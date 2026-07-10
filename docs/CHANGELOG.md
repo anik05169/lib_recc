@@ -14,6 +14,11 @@
   - `Precision@k`, `Recall@k`, `HitRate@k`, `MRR@k`
   - latency `mean`, `p50`, `p95`
 - Added `backend/eval/relevance_labels.example.json` for labeled relevance inputs
+- Added embeddings retriever mode in `backend/app/services/recommender.py`:
+  - `RECOMMENDER_MODE=tfidf|embeddings`
+  - `EMBEDDING_MODEL` (default: `sentence-transformers/all-MiniLM-L6-v2`)
+- Added `backend/requirements-embeddings.txt` (`transformers`, `torch`) for embeddings setup
+- Added `--mode` and `--books-file` options to stats script for embeddings and offline runs
 - Updated ML and backend docs with usage instructions
 
 ---

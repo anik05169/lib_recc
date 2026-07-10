@@ -1,0 +1,25 @@
+{
+  "config": {
+    "k": 5,
+    "runs": 20,
+    "labels_file": "C:\\Users\\Lenovo\\Downloads\\OneDrive\\Desktop\\clg main\\ml\\projecc\\lib_recc\\backend\\eval\\relevance_labels.example.json",
+    "mode": "tfidf",
+    "data_source": "mongodb"
+  },
+  "quality": {
+    "precision_at_k": 0.3333333333333333,
+    "recall_at_k": 0.7222222222222222,
+    "hit_rate_at_k": 1.0,
+    "mrr_at_k": 0.2888888888888889,
+    "evaluated_queries": 3,
+    "skipped_queries": 0
+  },
+  "latency_ms": {
+    "samples": 60,
+    "mean_ms": 2.8641849979370213,
+    "p50_ms": 2.5417499855393544,
+    "p95_ms": 5.090230017958674,
+    "min_ms": 1.7491999897174537,
+    "max_ms": 5.664900003466755
+  }
+}

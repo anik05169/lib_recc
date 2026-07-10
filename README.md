@@ -24,8 +24,8 @@ Full-stack personal library with **dual TF-IDF recommenders** and **HuggingFace 
 - Paginated book catalog with search
 - Personal library (collect from catalog or add custom books)
 - 1–5 star ratings with aggregate scores
-- **Global** similar-book recommendations (catalog TF-IDF)
-- **Per-user** similar-book recommendations (library TF-IDF)
+- **Global** similar-book recommendations (catalog TF-IDF or embeddings)
+- **Per-user** similar-book recommendations (library TF-IDF or embeddings)
 - AI assistant — natural language → 3 book suggestions (Llama-3 via HuggingFace)
 - Offline recommender evaluation toolkit (`Precision@k`, `Recall@k`, `HitRate@k`, `MRR@k`, `p50/p95` latency)
 

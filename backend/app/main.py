@@ -6,7 +6,7 @@ from threading import Thread
 
 from app.core.config import setup_cors, validate_runtime_config
 from app.routes import books, users, ratings, auth
-from app.services.recommender import is_model_ready
+from app.services.recommender import get_health_details, is_model_ready
 from app.startup import train_recommender_on_startup
 
 validate_runtime_config()
@@ -37,4 +37,10 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "recommender_ready": is_model_ready()}
+    details = get_health_details()
+    return {
+        "status": "ok",
+        "recommender_ready": is_model_ready(),
+        "pinecone_ready": details.get("pinecone_connected", False),
+        "catalog_vector_count": details.get("catalog_vector_count", 0),
+    }

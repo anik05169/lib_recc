@@ -48,6 +48,15 @@ def validate_runtime_config():
                 stacklevel=2,
             )
 
+        pinecone_key = os.getenv("PINECONE_API_KEY", "").strip()
+        pinecone_index = os.getenv("PINECONE_INDEX_NAME", "").strip()
+        if not pinecone_key or not pinecone_index:
+            warnings.warn(
+                "PINECONE_API_KEY and PINECONE_INDEX_NAME are not set. "
+                "Recommendations will return 503 until Pinecone is configured and synced.",
+                stacklevel=2,
+            )
+
 
 def setup_cors(app):
     origins = [
