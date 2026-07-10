@@ -35,7 +35,8 @@ load_dotenv(BACKEND_DIR / ".env")
 
 from app.db.mongo import get_mongo_db  # noqa: E402
 from app.db.ratings_util import get_avg_ratings_map  # noqa: E402
-from app.services.recommender import recommend, train_model  # noqa: E402
+from app.services.recommender import recommend, set_ratings_map, train_model  # noqa: E402
+from app.services import pinecone_store  # noqa: E402
 
 
 def _parse_args() -> argparse.Namespace:
@@ -66,6 +67,11 @@ def _parse_args() -> argparse.Namespace:
         "--offline",
         action="store_true",
         help="Use in-memory Pinecone test store (PINECONE_DISABLED) for offline eval",
+    )
+    parser.add_argument(
+        "--skip-train",
+        action="store_true",
+        help="Skip Pinecone re-sync; use vectors already indexed (after sync step)",
     )
     return parser.parse_args()
 
@@ -228,7 +234,14 @@ def main() -> int:
     if not books:
         raise RuntimeError("No books found. Seed catalog or pass --books-file.")
 
-    train_model(books, ratings_map)
+    if args.skip_train:
+        set_ratings_map(ratings_map)
+        pinecone_store.mark_namespace_ready(
+            pinecone_store.CATALOG_NAMESPACE,
+            len(books),
+        )
+    else:
+        train_model(books, ratings_map)
 
     quality = _evaluate_quality(queries, ratings_map, args.k)
     latency = _benchmark_latency([q["book_id"] for q in queries], ratings_map, args.k, args.runs)
@@ -240,6 +253,7 @@ def main() -> int:
             "labels_file": str(labels_path),
             "backend": "pinecone",
             "offline": bool(args.offline or args.books_file),
+            "skip_train": bool(args.skip_train),
             "data_source": data_source,
         },
         "quality": quality,

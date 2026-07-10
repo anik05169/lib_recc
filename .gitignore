@@ -13,4 +13,17 @@ build/
 .vscode/
 .DS_Store
 
-.env
+# ML / HuggingFace caches (downloaded at runtime — never commit)
+.cache/
+
+# Generated catalogs (fetch in CI via fetch_goodreads_catalog.py)
+library_db.books.goodreads.json
+library_db.books.10000.json
+books.csv
+
+# Benchmark artifacts (local runs + CI uploads via Actions artifacts)
+backend/eval/benchmark_report.json
+backend/eval/benchmark_report.md
+backend/eval/stats_goodreads.json
+backend/eval/api_latency_goodreads.json
+backend/eval/*_cached.json

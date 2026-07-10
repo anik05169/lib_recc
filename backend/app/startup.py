@@ -1,5 +1,6 @@
 from app.db.mongo import get_mongo_db
 from app.db.ratings_util import get_avg_ratings_map
+from app.services import pinecone_store
 from app.services.recommender import set_ratings_map, train_model
 from pymongo.errors import ConfigurationError, ServerSelectionTimeoutError
 
@@ -20,10 +21,14 @@ def train_recommender_on_startup():
         synced = train_model(books, ratings_map)
         print(f"Startup: ratings cached; {synced} catalog vectors synced to Pinecone")
         if synced == 0:
-            print(
-                "Hint: SKIP_EMBEDDING_SYNC is set or sync returned 0. "
-                "Run scripts/sync_pinecone_index.py to populate Pinecone."
-            )
+            if pinecone_store.warm_namespace_cache(pinecone_store.CATALOG_NAMESPACE):
+                count = pinecone_store.get_namespace_vector_count(pinecone_store.CATALOG_NAMESPACE)
+                print(f"Startup: Pinecone catalog cache warmed ({count} vectors)")
+            else:
+                print(
+                    "Hint: SKIP_EMBEDDING_SYNC is set or sync returned 0. "
+                    "Run scripts/sync_pinecone_index.py to populate Pinecone."
+                )
     except ServerSelectionTimeoutError:
         print("Could not connect to MongoDB. Recommender not initialized.")
         print("Hint: Check if your IP address is whitelisted in MongoDB Atlas.")

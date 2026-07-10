@@ -40,6 +40,10 @@ def synth_description(row: dict) -> str:
 
 
 def convert(csv_path: Path, out_path: Path, limit: int = 1000) -> int:
+    """Convert Goodreads CSV rows to seed JSON.
+
+    limit=0 means include all unique English titles found in the CSV.
+    """
     books = []
     seen: set[str] = set()
 
@@ -70,11 +74,13 @@ def convert(csv_path: Path, out_path: Path, limit: int = 1000) -> int:
                 book["image_url"] = image_url
 
             books.append(book)
-            if len(books) >= limit:
+            if limit > 0 and len(books) >= limit:
                 break
 
-    if len(books) < limit:
+    if limit > 0 and len(books) < limit:
         raise RuntimeError(f"Only found {len(books)} unique English books (wanted {limit})")
+    if not books:
+        raise RuntimeError("No books matched filters in CSV")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
@@ -87,7 +93,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Convert books.csv to seed JSON")
     parser.add_argument("--csv", default=str(REPO_ROOT / "books.csv"))
     parser.add_argument("--output", default=str(REPO_ROOT / "library_db.books.1000.json"))
-    parser.add_argument("--limit", type=int, default=1000)
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=1000,
+        help="Max books to export (0 = all unique English titles in CSV)",
+    )
     args = parser.parse_args()
 
     count = convert(Path(args.csv), Path(args.output), limit=args.limit)

@@ -1,0 +1,110 @@
+name: Catalog benchmark (~9.8k Goodreads)
+
+# Manual only — fetches goodbooks-10k, seeds MongoDB, syncs Pinecone, benchmarks latency.
+# Does not run on push. Download reports from the workflow Artifacts tab.
+
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: "Latency runs per query book ID"
+        required: false
+        default: "20"
+        type: string
+      skip_api:
+        description: "Skip API uvicorn benchmark (in-process only)"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: catalog-benchmark-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+      PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
+      JWT_SECRET: ci-benchmark-secret
+      EMBEDDING_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      HF_HOME: ${{ github.workspace }}/.cache/huggingface
+      TRANSFORMERS_CACHE: ${{ github.workspace }}/.cache/huggingface
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-embeddings.txt
+
+      - name: Cache HuggingFace model
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache/huggingface
+          key: hf-minilm-${{ hashFiles('backend/requirements-embeddings.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-embeddings.txt
+
+      - name: Validate secrets
+        run: |
+          test -n "$MONGODB_URI" || (echo "Missing MONGODB_URI secret" && exit 1)
+          test -n "$PINECONE_API_KEY" || (echo "Missing PINECONE_API_KEY secret" && exit 1)
+          test -n "$PINECONE_INDEX_NAME" || (echo "Missing PINECONE_INDEX_NAME secret" && exit 1)
+
+      - name: Run catalog benchmark pipeline
+        run: |
+          ARGS="--runs ${{ inputs.runs }}"
+          if [ "${{ inputs.skip_api }}" = "true" ]; then
+            ARGS="$ARGS --skip-api"
+          fi
+          python scripts/run_catalog_benchmark.py $ARGS
+
+      - name: Upload benchmark reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-benchmark-${{ github.run_id }}
+          path: |
+            backend/eval/benchmark_report.json
+            backend/eval/benchmark_report.md
+            backend/eval/stats_goodreads.json
+            backend/eval/api_latency_goodreads.json
+          retention-days: 30
+
+      - name: Print CI time estimate summary
+        if: always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("eval/benchmark_report.json")
+          if not p.exists():
+              print("No benchmark_report.json yet")
+              raise SystemExit(0)
+          r = json.loads(p.read_text())
+          est = r.get("ci_time_estimate", {})
+          cold = est.get("cold_minutes", {})
+          warm = est.get("warm_hf_cache_minutes", {})
+          print("=== CI time estimates (minutes) ===")
+          print(f"Cold pipeline:  {cold.get('pipeline_total')} (+ pip ~3) = {cold.get('with_pip_install')} total")
+          print(f"Warm HF cache:  {warm.get('pipeline_total')} (+ pip ~3) = {warm.get('with_pip_install')} total")
+          print(f"Recommended timeout-minutes: {est.get('recommended_workflow_timeout_minutes')}")
+          timing = r.get("pipeline_timing", {})
+          if timing.get("total_minutes"):
+              print(f"Actual this run: {timing['total_minutes']} min ({timing['total_seconds']}s)")
+          PY

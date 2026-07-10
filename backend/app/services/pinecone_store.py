@@ -10,6 +10,11 @@ _index = None
 
 CATALOG_NAMESPACE = "catalog"
 
+# In-process caches — avoid describe_index_stats / fetch on the hot path.
+_namespace_ready: dict[str, bool] = {}
+_namespace_counts: dict[str, int] = {}
+_vector_cache: dict[str, dict[str, list[float]]] = {}
+
 
 def user_namespace(user_id: str) -> str:
     return f"user_{user_id}"
@@ -40,6 +45,50 @@ def _get_index():
         return _index
 
 
+def _clear_namespace_cache(namespace: str) -> None:
+    with _lock:
+        _namespace_ready.pop(namespace, None)
+        _namespace_counts.pop(namespace, None)
+        _vector_cache.pop(namespace, None)
+
+
+def _cache_vectors(namespace: str, items: list[dict[str, Any]]) -> None:
+    with _lock:
+        store = _vector_cache.setdefault(namespace, {})
+        for item in items:
+            values = item.get("values")
+            if values is not None:
+                store[item["id"]] = values
+
+
+def mark_namespace_ready(namespace: str, vector_count: int) -> None:
+    with _lock:
+        _namespace_ready[namespace] = vector_count > 0
+        _namespace_counts[namespace] = vector_count
+
+
+def warm_namespace_cache(namespace: str) -> bool:
+    """One-time Pinecone stats fetch to populate readiness caches (startup/health only)."""
+    if _pinecone_disabled():
+        ready = _test_store_has_namespace(namespace)
+        count = len(_test_store.get(namespace, {}))
+        mark_namespace_ready(namespace, count)
+        return ready
+
+    index = _get_index()
+    if index is None:
+        return False
+    try:
+        stats = index.describe_index_stats()
+        namespaces = stats.get("namespaces") or {}
+        ns_stats = namespaces.get(namespace) or {}
+        count = int(ns_stats.get("vector_count") or 0)
+        mark_namespace_ready(namespace, count)
+        return count > 0
+    except Exception:
+        return False
+
+
 def is_configured() -> bool:
     if _pinecone_disabled():
         return True
@@ -63,34 +112,22 @@ def is_namespace_ready(namespace: str) -> bool:
     if _pinecone_disabled():
         return _test_store_has_namespace(namespace)
 
-    index = _get_index()
-    if index is None:
-        return False
-    try:
-        stats = index.describe_index_stats()
-        namespaces = stats.get("namespaces") or {}
-        ns_stats = namespaces.get(namespace)
-        if not ns_stats:
-            return False
-        return int(ns_stats.get("vector_count") or 0) > 0
-    except Exception:
-        return False
+    with _lock:
+        if namespace in _namespace_ready:
+            return _namespace_ready[namespace]
+    return False
 
 
 def get_namespace_vector_count(namespace: str) -> int:
     if _pinecone_disabled():
         return len(_test_store.get(namespace, {}))
 
-    index = _get_index()
-    if index is None:
-        return 0
-    try:
-        stats = index.describe_index_stats()
-        namespaces = stats.get("namespaces") or {}
-        ns_stats = namespaces.get(namespace) or {}
-        return int(ns_stats.get("vector_count") or 0)
-    except Exception:
-        return 0
+    with _lock:
+        if namespace in _namespace_counts:
+            return _namespace_counts[namespace]
+    warm_namespace_cache(namespace)
+    with _lock:
+        return _namespace_counts.get(namespace, 0)
 
 
 def upsert_vectors(namespace: str, items: list[dict[str, Any]]) -> None:
@@ -101,6 +138,8 @@ def upsert_vectors(namespace: str, items: list[dict[str, Any]]) -> None:
         store = _test_store.setdefault(namespace, {})
         for item in items:
             store[item["id"]] = item
+        mark_namespace_ready(namespace, len(store))
+        _cache_vectors(namespace, items)
         return
 
     index = _get_index()
@@ -112,10 +151,16 @@ def upsert_vectors(namespace: str, items: list[dict[str, Any]]) -> None:
         batch = items[start : start + batch_size]
         index.upsert(vectors=batch, namespace=namespace)
 
+    with _lock:
+        prev = _namespace_counts.get(namespace, 0)
+    mark_namespace_ready(namespace, prev + len(items))
+    _cache_vectors(namespace, items)
+
 
 def delete_namespace(namespace: str) -> None:
     if _pinecone_disabled():
         _test_store.pop(namespace, None)
+        _clear_namespace_cache(namespace)
         return
 
     index = _get_index()
@@ -125,14 +170,23 @@ def delete_namespace(namespace: str) -> None:
         index.delete(delete_all=True, namespace=namespace)
     except Exception:
         pass
+    _clear_namespace_cache(namespace)
 
 
 def fetch_vector(namespace: str, book_id: int) -> list[float] | None:
     vector_id = str(book_id)
 
+    with _lock:
+        cached = _vector_cache.get(namespace, {}).get(vector_id)
+    if cached is not None:
+        return cached
+
     if _pinecone_disabled():
         item = _test_store.get(namespace, {}).get(vector_id)
-        return item["values"] if item else None
+        if item:
+            _cache_vectors(namespace, [item])
+            return item["values"]
+        return None
 
     index = _get_index()
     if index is None:
@@ -144,7 +198,10 @@ def fetch_vector(namespace: str, book_id: int) -> list[float] | None:
         record = vectors.get(vector_id)
         if not record:
             return None
-        return record.get("values")
+        values = record.get("values")
+        if values is not None:
+            _cache_vectors(namespace, [{"id": vector_id, "values": values}])
+        return values
     except Exception:
         return None
 
@@ -206,6 +263,10 @@ _test_store: dict[str, dict[str, dict[str, Any]]] = {}
 
 def reset_test_store() -> None:
     _test_store.clear()
+    with _lock:
+        _namespace_ready.clear()
+        _namespace_counts.clear()
+        _vector_cache.clear()
 
 
 def _test_store_has_namespace(namespace: str) -> bool:

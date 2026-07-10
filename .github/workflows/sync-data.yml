@@ -66,7 +66,7 @@ jobs:
 
       - name: Seed MongoDB catalog
         run: |
-          ARGS="--books-file ../library_db.books.1000.json"
+          ARGS="--books-file library_db.books.1000.json"
           if [ "${{ github.event_name }}" = "push" ] || [ "${{ inputs.force_reseed }}" = "true" ]; then
             ARGS="$ARGS --force"
           fi
@@ -79,7 +79,9 @@ jobs:
         run: |
           python - <<'PY'
           from app.services import pinecone_store
-          count = pinecone_store.get_namespace_vector_count(pinecone_store.CATALOG_NAMESPACE)
+          ns = pinecone_store.CATALOG_NAMESPACE
+          pinecone_store.warm_namespace_cache(ns)
+          count = pinecone_store.get_namespace_vector_count(ns)
           print(f"catalog_vector_count={count}")
           if count < 100:
               raise SystemExit(f"Expected at least 100 vectors, got {count}")
