@@ -37,45 +37,61 @@ function Login({ onLogin, switchToRegister }) {
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h2>Login</h2>
-        {error && <div className="error-message">{error}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-          <button type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-        <p className="switch-auth">
-          Don't have an account?{" "}
-          <button type="button" onClick={switchToRegister} className="link-button">
-            Register
-          </button>
-        </p>
+    <div className="auth-page">
+      <aside className="auth-hero" aria-hidden="false">
+        <div className="auth-hero-ornament" />
+        <div className="auth-hero-content">
+          <p className="auth-brand">Library AI</p>
+          <p className="auth-hero-line">
+            Build your shelf, rate what you love, and find the next book worth reading.
+          </p>
+        </div>
+      </aside>
+
+      <div className="auth-panel">
+        <div className="auth-card">
+          <h2>Welcome back</h2>
+          <p className="auth-card-lead">Sign in to open your catalog and collection.</p>
+          {error && <div className="error-message" role="alert">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="login-email">Email</label>
+              <input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="login-password">Password</label>
+              <input
+                id="login-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
+            <button type="submit" disabled={loading}>
+              {loading ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
+          <p className="switch-auth">
+            Don&apos;t have an account?
+            <button type="button" onClick={switchToRegister} className="link-button">
+              Create one
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
 }
 
 export default Login;
-

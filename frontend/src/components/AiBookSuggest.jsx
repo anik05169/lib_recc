@@ -63,16 +63,24 @@ export default function AiBookSuggest({ setNewBook, addCustomBook, showToast, ge
       });
 
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const detail =
+          typeof data.detail === "string"
+            ? data.detail
+            : Array.isArray(data.detail)
+              ? data.detail.map((d) => d.msg || JSON.stringify(d)).join("; ")
+              : null;
+
         if (res.status === 401) {
           showToast?.("Please log in to use AI suggestions", "warning");
           return;
         }
         if (res.status === 503) {
-          const data = await res.json().catch(() => ({}));
-          showToast?.(data.detail || "AI suggestions are not configured", "warning");
+          showToast?.(detail || "AI suggestions are not configured", "warning");
           return;
         }
-        throw new Error(`AI request failed: ${res.status}`);
+        showToast?.(detail || `AI request failed (${res.status})`, "error");
+        return;
       }
 
       const data = await res.json();
@@ -111,7 +119,10 @@ export default function AiBookSuggest({ setNewBook, addCustomBook, showToast, ge
       }
     } catch (err) {
       console.error("AI suggestion error:", err);
-      showToast?.("AI suggestion failed. Try again later.", "error");
+      showToast?.(
+        err?.message ? `AI suggestion failed: ${err.message}` : "AI suggestion failed. Try again later.",
+        "error"
+      );
     } finally {
       setAiLoading(false);
     }
@@ -120,21 +131,25 @@ export default function AiBookSuggest({ setNewBook, addCustomBook, showToast, ge
   return (
     <>
       <div className="ai-suggest-box">
-        <h3>AI Assistant Suggestions</h3>
+        <h3>AI suggestions</h3>
+        <p className="section-lead">
+          Describe a mood, genre, or theme — get fresh titles to add privately.
+        </p>
         <textarea
-          placeholder="I'm looking for a gripping sci-fi novel about time travel..."
+          placeholder="I'm looking for a gripping sci-fi novel about time travel…"
           value={aiQuery}
           onChange={(e) => setAiQuery(e.target.value)}
+          aria-label="Describe books you want"
         />
 
-        <button onClick={getAiSuggestions} disabled={aiLoading}>
-          {aiLoading ? "Consulting AI..." : "Get Recommendations"}
+        <button type="button" onClick={getAiSuggestions} disabled={aiLoading}>
+          {aiLoading ? "Finding books…" : "Get recommendations"}
         </button>
       </div>
 
       {aiSuggestions.length > 0 && (
         <div className="ai-results">
-          <h4>AI Suggested Books</h4>
+          <h4>Suggested for you</h4>
 
           <ul className="book-list">
             {aiSuggestions.map((book) => (
@@ -143,10 +158,8 @@ export default function AiBookSuggest({ setNewBook, addCustomBook, showToast, ge
                 book={book}
                 showDescription
               >
-                <button
-                  onClick={() => handleAddToLibrary(book)}
-                >
-                  Add to Collection
+                <button type="button" onClick={() => handleAddToLibrary(book)}>
+                  Add to collection
                 </button>
               </BookCard>
             ))}

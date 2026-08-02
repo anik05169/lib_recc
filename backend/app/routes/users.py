@@ -4,7 +4,12 @@ from app.db.mongo import get_mongo_db
 from app.db.ratings_util import get_avg_ratings_map
 from app.models.schemas import Book
 from app.core.auth import get_current_user
-from app.services.recommender import train_user_model, recommend_user, get_ratings_map
+from app.services.recommender import (
+    get_ratings_map,
+    recommend_catalog_for_library_book,
+    recommend_user,
+    train_user_model,
+)
 
 router = APIRouter(prefix="/user", tags=["Users"])
 
@@ -99,16 +104,45 @@ def get_user_recommendations(
     book_id: int,
     current_user: dict = Depends(get_current_user),
 ):
-    """Get recommendations for a book from user's personal library."""
+    """Similar books for a library item: global catalog + in-library matches.
+
+    Returns:
+      {
+        "catalog": Book[],   # global similar, excluding books already in library
+        "library": Book[],   # similar within the user's library
+      }
+    """
     db = get_mongo_db()
     user_id = str(current_user["_id"])
 
     user_books = list(db.user_books.find({"user_id": user_id}, {"_id": 0}))
+    library_ids = {int(b["book_id"]) for b in user_books if "book_id" in b}
     ratings_map = get_ratings_map()
-    recommendations = recommend_user(
-        user_id,
-        book_id,
-        user_books=user_books,
-        ratings_map=ratings_map,
+
+    library_recs = (
+        recommend_user(
+            user_id,
+            book_id,
+            user_books=user_books,
+            ratings_map=ratings_map,
+        )
+        or []
     )
-    return recommendations or []
+
+    seed_book = next(
+        (b for b in user_books if int(b.get("book_id", -1)) == book_id),
+        None,
+    )
+    catalog_recs = recommend_catalog_for_library_book(
+        book_id,
+        seed_book=seed_book,
+        user_id=user_id,
+        top_n=5,
+        ratings_map=ratings_map,
+        exclude_ids=library_ids,
+    )
+
+    return {
+        "catalog": catalog_recs,
+        "library": library_recs,
+    }

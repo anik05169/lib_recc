@@ -265,7 +265,7 @@ function App() {
     [expandedBookId]
   );
 
-  // Open library book + fetch user-specific recommendations
+  // Open library book + fetch catalog + in-library similar books
   const openLibraryBookDetails = useCallback(
     async (book) => {
       if (expandedLibraryBookId === book.book_id) {
@@ -273,24 +273,42 @@ function App() {
         return;
       }
       setExpandedLibraryBookId(book.book_id);
+      // Clear cache so UI shows loading while refetching
+      setLibraryRecommendations((prev) => {
+        const next = { ...prev };
+        delete next[book.book_id];
+        return next;
+      });
       try {
         const res = await fetch(`${BASE_URL}/user/recommend/${book.book_id}`, {
           headers: getAuthHeaders(),
         });
         if (res.ok) {
           const data = await res.json();
+          const payload = Array.isArray(data)
+            ? { catalog: data, library: [] }
+            : {
+                catalog: Array.isArray(data?.catalog) ? data.catalog : [],
+                library: Array.isArray(data?.library) ? data.library : [],
+              };
           setLibraryRecommendations((prev) => ({
             ...prev,
-            [book.book_id]: Array.isArray(data) ? data : [],
+            [book.book_id]: payload,
           }));
         } else if (res.status === 401) {
           handleLogout();
         } else {
-          setLibraryRecommendations((prev) => ({ ...prev, [book.book_id]: [] }));
+          setLibraryRecommendations((prev) => ({
+            ...prev,
+            [book.book_id]: { catalog: [], library: [] },
+          }));
         }
       } catch (err) {
         console.error("Failed to load library recommendations:", err);
-        setLibraryRecommendations((prev) => ({ ...prev, [book.book_id]: [] }));
+        setLibraryRecommendations((prev) => ({
+          ...prev,
+          [book.book_id]: { catalog: [], library: [] },
+        }));
       }
     },
     [expandedLibraryBookId, getAuthHeaders, handleLogout]
@@ -409,20 +427,28 @@ function App() {
 
   if (checkingAuth) {
     return (
-      <div className="container">
-        <p>Loading...</p>
+      <div className="status-screen">
+        <div className="status-panel">
+          <h1>Library AI</h1>
+          <p>Opening your library…</p>
+          <div className="loading-dots" aria-hidden="true">
+            <span /><span /><span />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!isApiConfigured) {
     return (
-      <div className="container">
-        <h1>Configuration Required</h1>
-        <p>
-          Set <code>VITE_API_BASE_URL</code> in <code>frontend/.env</code> (see{" "}
-          <code>frontend/.env.example</code>).
-        </p>
+      <div className="status-screen">
+        <div className="status-panel">
+          <h1>Configuration required</h1>
+          <p>
+            Set <code>VITE_API_BASE_URL</code> in <code>frontend/.env</code> (see{" "}
+            <code>frontend/.env.example</code>).
+          </p>
+        </div>
       </div>
     );
   }
@@ -436,82 +462,100 @@ function App() {
   }
 
   return (
-    <div className="container">
-      <header className="header-section">
-        <div>
-          <h1>Library AI</h1>
-          {user?.name && (
-            <p className="header-greeting">Welcome, {user.name}</p>
-          )}
-        </div>
-        <button onClick={handleLogout} className="btn-logout btn-secondary">
-          Logout
-        </button>
-      </header>
-
-      <div className="nav-tabs">
-        <button
-          className={view === "catalog" ? "active" : ""}
-          onClick={() => setView("catalog")}
-        >
-          Explore Catalog
-        </button>
-        <button
-          className={view === "library" ? "active" : ""}
-          onClick={() => setView("library")}
-        >
-          My Collection
-        </button>
-      </div>
-
-      <main className="content-area">
-        {view === "catalog" && (
-          <CatalogView
-            books={catalogBooks}
-            loading={loading.catalog}
-            expandedBookId={expandedBookId}
-            recommendations={recommendations}
-            openBookDetails={openBookDetails}
-            addFromCatalog={addFromCatalog}
-            userBookIds={userBookIds}
-            searchQuery={searchQuery}
-            onSearch={handleSearch}
-            pagination={pagination}
-            onPageChange={handlePageChange}
-          />
-        )}
-
-        {view === "library" && (
-          <LibraryView
-            books={userBooks}
-            loading={loading.library}
-            avgRatings={avgRatings}
-            userRatings={userRatings}
-            rateBook={rateBook}
-            setUserBooks={setUserBooks}
-            newBook={newBook}
-            setNewBook={setNewBook}
-            addCustomBook={addCustomBook}
-            expandedBookId={expandedLibraryBookId}
-            recommendations={libraryRecommendations}
-            openBookDetails={openLibraryBookDetails}
-            deleteFromLibrary={deleteFromLibrary}
-            showToast={showToast}
-            getAuthHeaders={getAuthHeaders}
-          />
-        )}
-      </main>
-
-      {/* Toast notifications */}
-      {toasts.length > 0 && (
-        <div className="toast-container" role="status" aria-live="polite">
-          {toasts.map((t) => (
-            <div key={t.id} className={`toast ${t.type}`}>
-              {t.message}
+    <div className="app-shell">
+      <div className="container">
+        <header className="header-section">
+          <div className="brand-block">
+            <div className="brand-mark">
+              <span className="brand-mark-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" strokeLinecap="round" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <h1>Library AI</h1>
             </div>
-          ))}
-        </div>
-      )}
+            <p className="header-tagline">Catalog, collection, and recommendations in one place.</p>
+            {user?.name && (
+              <p className="header-greeting">
+                Welcome, <strong>{user.name}</strong>
+              </p>
+            )}
+          </div>
+          <div className="header-actions">
+            <button onClick={handleLogout} className="btn-logout btn-secondary" type="button">
+              Log out
+            </button>
+          </div>
+        </header>
+
+        <nav className="nav-tabs" aria-label="Primary">
+          <button
+            type="button"
+            className={view === "catalog" ? "active" : ""}
+            aria-current={view === "catalog" ? "page" : undefined}
+            onClick={() => setView("catalog")}
+          >
+            Explore Catalog
+          </button>
+          <button
+            type="button"
+            className={view === "library" ? "active" : ""}
+            aria-current={view === "library" ? "page" : undefined}
+            onClick={() => setView("library")}
+          >
+            My Collection
+          </button>
+        </nav>
+
+        <main className="content-area">
+          {view === "catalog" && (
+            <CatalogView
+              books={catalogBooks}
+              loading={loading.catalog}
+              expandedBookId={expandedBookId}
+              recommendations={recommendations}
+              openBookDetails={openBookDetails}
+              addFromCatalog={addFromCatalog}
+              userBookIds={userBookIds}
+              searchQuery={searchQuery}
+              onSearch={handleSearch}
+              pagination={pagination}
+              onPageChange={handlePageChange}
+            />
+          )}
+
+          {view === "library" && (
+            <LibraryView
+              books={userBooks}
+              loading={loading.library}
+              avgRatings={avgRatings}
+              userRatings={userRatings}
+              rateBook={rateBook}
+              setUserBooks={setUserBooks}
+              newBook={newBook}
+              setNewBook={setNewBook}
+              addCustomBook={addCustomBook}
+              expandedBookId={expandedLibraryBookId}
+              recommendations={libraryRecommendations}
+              openBookDetails={openLibraryBookDetails}
+              deleteFromLibrary={deleteFromLibrary}
+              showToast={showToast}
+              getAuthHeaders={getAuthHeaders}
+            />
+          )}
+        </main>
+
+        {toasts.length > 0 && (
+          <div className="toast-container" role="status" aria-live="polite">
+            {toasts.map((t) => (
+              <div key={t.id} className={`toast ${t.type}`}>
+                {t.message}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

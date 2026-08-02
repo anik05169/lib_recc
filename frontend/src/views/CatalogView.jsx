@@ -20,7 +20,6 @@ export default function CatalogView({
   const debounceRef = useRef(null);
   const skipInitialSearch = useRef(true);
 
-  // Debounced search — only fires when the user changes the input
   useEffect(() => {
     if (skipInitialSearch.current) {
       skipInitialSearch.current = false;
@@ -33,7 +32,6 @@ export default function CatalogView({
     return () => clearTimeout(debounceRef.current);
   }, [localSearch, onSearch]);
 
-  // Generate page numbers for pagination
   const getPageNumbers = () => {
     const pages = [];
     const total = pagination.pages;
@@ -45,23 +43,38 @@ export default function CatalogView({
     return pages;
   };
 
+  const totalLabel =
+    typeof pagination.total === "number"
+      ? `${pagination.total.toLocaleString()} book${pagination.total === 1 ? "" : "s"}`
+      : null;
+
   return (
     <>
-      <h2>Catalog</h2>
+      <div className="section-heading">
+        <h2>Catalog</h2>
+        {totalLabel && !loading && (
+          <p className="section-meta">{totalLabel}</p>
+        )}
+      </div>
 
-      {/* Search Bar */}
       <div className="search-bar-wrapper">
-        <span className="search-icon">🔍</span>
+        <svg className="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
+        </svg>
+        <label htmlFor="catalog-search" className="visually-hidden">
+          Search catalog
+        </label>
         <input
-          type="text"
-          placeholder="Search books by title or description..."
+          type="search"
+          placeholder="Search by title or description…"
           value={localSearch}
           onChange={(e) => setLocalSearch(e.target.value)}
           id="catalog-search"
+          autoComplete="off"
         />
       </div>
 
-      {/* Skeleton loaders only on initial empty load */}
       {loading && (!books || books.length === 0) && (
         <ul className="book-list">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -71,19 +84,19 @@ export default function CatalogView({
       )}
 
       {loading && books && books.length > 0 && (
-        <p className="catalog-updating" style={{ color: "var(--text-muted)", marginBottom: "1rem" }}>
-          Updating results…
-        </p>
+        <p className="catalog-updating">Updating results…</p>
       )}
 
-      {/* No results */}
       {!loading && (!books || books.length === 0) && (
-        <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "3rem" }}>
-          {searchQuery ? `No books found for "${searchQuery}"` : "No books in catalog yet."}
-        </p>
+        <div className="empty-state">
+          <p>
+            {searchQuery
+              ? `No books found for “${searchQuery}”. Try a different search.`
+              : "No books in the catalog yet."}
+          </p>
+        </div>
       )}
 
-      {/* Book grid — keep visible while refreshing search */}
       {books && books.length > 0 && (
         <ul className="book-list">
           {books.map((book) => (
@@ -94,28 +107,29 @@ export default function CatalogView({
               inLibrary={userBookIds?.has(book.book_id)}
             >
               <button
+                type="button"
                 className="btn-secondary"
                 onClick={() => openBookDetails(book)}
               >
                 {expandedBookId === book.book_id
-                  ? "Hide Recommendations"
-                  : "Similar Books"}
+                  ? "Hide recommendations"
+                  : "Similar books"}
               </button>
 
               <button
+                type="button"
                 onClick={() => addFromCatalog(book.book_id)}
                 disabled={userBookIds?.has(book.book_id)}
               >
-                {userBookIds?.has(book.book_id) ? "Collected ✓" : "Collect Book"}
+                {userBookIds?.has(book.book_id) ? "Collected" : "Collect book"}
               </button>
 
-              {/* Recommendations inside this book card */}
               {expandedBookId === book.book_id && (
                 <div className="recommendation-box">
-                  <h4>Related Books</h4>
+                  <h4>Related books</h4>
 
                   {!recommendations[book.book_id] ? (
-                    <p>Loading recommendations...</p>
+                    <p>Loading recommendations…</p>
                   ) : recommendations[book.book_id].length === 0 ? (
                     <p>No related books found.</p>
                   ) : (
@@ -123,12 +137,21 @@ export default function CatalogView({
                       {recommendations[book.book_id].map((b) => (
                         <li
                           key={b.book_id}
-                          style={{ cursor: "pointer" }}
                           onClick={() =>
                             setExpandedRecId(
                               expandedRecId === b.book_id ? null : b.book_id
                             )
                           }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setExpandedRecId(
+                                expandedRecId === b.book_id ? null : b.book_id
+                              );
+                            }
+                          }}
+                          role="button"
+                          tabIndex={0}
                         >
                           <strong>{b.title}</strong>
                           {expandedRecId === b.book_id && (
@@ -147,21 +170,23 @@ export default function CatalogView({
         </ul>
       )}
 
-      {/* Pagination */}
       {pagination.pages > 1 && (
-        <div className="pagination">
+        <div className="pagination" aria-label="Catalog pages">
           <button
+            type="button"
             className="btn-secondary"
             disabled={pagination.page <= 1}
             onClick={() => onPageChange(pagination.page - 1)}
           >
-            ‹ Prev
+            Prev
           </button>
 
           {getPageNumbers().map((p) => (
             <button
+              type="button"
               key={p}
               className={p === pagination.page ? "active-page" : "btn-secondary"}
+              aria-current={p === pagination.page ? "page" : undefined}
               onClick={() => onPageChange(p)}
             >
               {p}
@@ -170,14 +195,18 @@ export default function CatalogView({
 
           <span className="pagination-info">
             of {pagination.pages}
+            {typeof pagination.total === "number" && (
+              <> · {pagination.total.toLocaleString()} total</>
+            )}
           </span>
 
           <button
+            type="button"
             className="btn-secondary"
             disabled={pagination.page >= pagination.pages}
             onClick={() => onPageChange(pagination.page + 1)}
           >
-            Next ›
+            Next
           </button>
         </div>
       )}

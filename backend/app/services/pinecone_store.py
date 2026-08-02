@@ -61,6 +61,24 @@ def _cache_vectors(namespace: str, items: list[dict[str, Any]]) -> None:
                 store[item["id"]] = values
 
 
+def _field(obj: Any, key: str, default: Any = None) -> Any:
+    """Read a field from a dict or Pinecone SDK dataclass/OpenAPI model."""
+    if obj is None:
+        return default
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    if hasattr(obj, key):
+        value = getattr(obj, key)
+        return default if value is None else value
+    getter = getattr(obj, "get", None)
+    if callable(getter):
+        try:
+            return getter(key, default)
+        except TypeError:
+            return getter(key) if getter(key) is not None else default
+    return default
+
+
 def mark_namespace_ready(namespace: str, vector_count: int) -> None:
     with _lock:
         _namespace_ready[namespace] = vector_count > 0
@@ -80,9 +98,12 @@ def warm_namespace_cache(namespace: str) -> bool:
         return False
     try:
         stats = index.describe_index_stats()
-        namespaces = stats.get("namespaces") or {}
-        ns_stats = namespaces.get(namespace) or {}
-        count = int(ns_stats.get("vector_count") or 0)
+        namespaces = _field(stats, "namespaces") or {}
+        if isinstance(namespaces, dict):
+            ns_stats = namespaces.get(namespace) or {}
+        else:
+            ns_stats = _field(namespaces, namespace) or {}
+        count = int(_field(ns_stats, "vector_count") or 0)
         mark_namespace_ready(namespace, count)
         return count > 0
     except Exception:
@@ -194,12 +215,16 @@ def fetch_vector(namespace: str, book_id: int) -> list[float] | None:
 
     try:
         result = index.fetch(ids=[vector_id], namespace=namespace)
-        vectors = result.get("vectors") or {}
-        record = vectors.get(vector_id)
+        vectors = _field(result, "vectors") or {}
+        if isinstance(vectors, dict):
+            record = vectors.get(vector_id)
+        else:
+            record = _field(vectors, vector_id)
         if not record:
             return None
-        values = record.get("values")
+        values = _field(record, "values")
         if values is not None:
+            values = list(values)
             _cache_vectors(namespace, [{"id": vector_id, "values": values}])
         return values
     except Exception:
@@ -226,7 +251,7 @@ def query_similar(
             namespace=namespace,
             include_metadata=True,
         )
-        matches = result.get("matches") or []
+        matches = _field(result, "matches") or []
         hits = []
         for match in matches:
             book_id = _book_id_from_match(match, exclude_id)
@@ -235,8 +260,8 @@ def query_similar(
             hits.append(
                 {
                     "book_id": book_id,
-                    "score": float(match.get("score") or 0.0),
-                    "metadata": match.get("metadata") or {},
+                    "score": float(_field(match, "score") or 0.0),
+                    "metadata": dict(_field(match, "metadata") or {}),
                 }
             )
         return hits
@@ -244,11 +269,13 @@ def query_similar(
         return []
 
 
-def _book_id_from_match(match: dict, exclude_id: int | None) -> int | None:
-    metadata = match.get("metadata") or {}
-    raw_id = metadata.get("book_id")
+def _book_id_from_match(match: Any, exclude_id: int | None) -> int | None:
+    metadata = _field(match, "metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = dict(metadata) if metadata else {}
+    raw_id = metadata.get("book_id") if isinstance(metadata, dict) else _field(metadata, "book_id")
     if raw_id is None:
-        raw_id = match.get("id")
+        raw_id = _field(match, "id")
     if raw_id is None:
         return None
     book_id = int(raw_id)

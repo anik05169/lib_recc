@@ -15,7 +15,11 @@ from app.services.recommender import (
     train_model,
     upsert_book,
 )
-from app.services.hf_recommender import HFNotConfiguredError, recommend_books_hf
+from app.services.hf_recommender import (
+    HFNotConfiguredError,
+    HFServiceError,
+    recommend_books_hf,
+)
 from app.core.auth import get_current_user, require_admin
 
 
@@ -106,10 +110,17 @@ def ai_suggest_new_books(
     except HFNotConfiguredError:
         raise HTTPException(
             status_code=503,
-            detail="AI suggestions are not configured",
+            detail="AI suggestions are not configured. Set HF_API_KEY on the backend.",
         )
-    except Exception:
+    except HFServiceError as e:
+        print(f"AI suggest HFServiceError: {e}")
         raise HTTPException(
             status_code=502,
-            detail="AI suggestion service unavailable",
+            detail=str(e),
+        )
+    except Exception as e:
+        print(f"AI suggest unexpected error: {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"AI suggestion failed: {type(e).__name__}: {e}",
         )

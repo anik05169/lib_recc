@@ -4,7 +4,7 @@ export default function BookCard({ book, children, inLibrary, showDescription = 
   return (
     <li className="book-card">
       {inLibrary && (
-        <span className="badge-in-library">✓ In Library</span>
+        <span className="badge-in-library">In collection</span>
       )}
 
       <div className="book-card-main">

@@ -1,5 +1,3 @@
-// LibraryView.jsx
-
 import AiBookSuggest from "../components/AiBookSuggest";
 import AddCustomBook from "../components/AddCustomBook";
 import UserLibrary from "../components/UserLibrary";
@@ -16,9 +14,18 @@ export default function LibraryView(props) {
     getAuthHeaders,
   } = props;
 
+  const count = books?.length ?? 0;
+
   return (
     <>
-      <h2>My Library</h2>
+      <div className="section-heading">
+        <h2>My collection</h2>
+        {!loading && (
+          <p className="section-meta">
+            {count === 0 ? "Empty shelf" : `${count} book${count === 1 ? "" : "s"}`}
+          </p>
+        )}
+      </div>
 
       <AiBookSuggest
         setNewBook={setNewBook}
@@ -33,9 +40,8 @@ export default function LibraryView(props) {
         addCustomBook={addCustomBook}
       />
 
-      {/* Skeleton loaders */}
       {loading && (
-        <ul className="book-list" style={{ marginTop: "2rem" }}>
+        <ul className="book-list library-toolbar">
           {Array.from({ length: 4 }).map((_, i) => (
             <SkeletonCard key={`skel-lib-${i}`} />
           ))}
@@ -43,9 +49,11 @@ export default function LibraryView(props) {
       )}
 
       {!loading && books?.length === 0 && (
-        <p style={{ color: "var(--text-muted)", textAlign: "center", padding: "3rem" }}>
-          Your library is empty. Add books from the catalog or use the AI assistant!
-        </p>
+        <div className="empty-state">
+          <p>
+            Your collection is empty. Collect books from the catalog or ask the AI assistant for ideas.
+          </p>
+        </div>
       )}
 
       {!loading && books?.length > 0 && <UserLibrary {...props} />}

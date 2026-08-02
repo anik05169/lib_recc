@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-07-19 — Catalog related books + library dual recommend
+
+### Fixes
+- Pinecone SDK `FetchResponse`/`Vector` dataclasses broke `fetch_vector` (`.get` missing) → catalog “Related books” always empty; parse via `_field()`
+- With `SKIP_EMBEDDING_SYNC`, user-library vectors now copy from catalog; `recommend_user` also falls back to catalog-filtered library matches
+- Collection UI shows “Also in your library” when ≥1 in-library similar result
+
+### Tooling
+- `scripts/capture_screenshots.py` — Playwright captures for login, catalog, related books, collection, dual library recs, AI suggest
+
+---
+
+## 2026-07-19 — Frontend visual refresh
+
+### UX / UI
+- Warm charcoal + teal palette (replaces indigo/purple glass theme)
+- Fraunces + Figtree typography; calmer book-card motion
+- Brand-first login/register split layout
+- Catalog shows total book count; clearer empty/loading states
+- Search uses SVG icon + accessible label; nav `aria-current`
+- Custom-book and AI suggest sections use shared CSS (less inline styles)
+
+---
+
 ## 2026-07-10 — Pinecone caching, ~9.8k benchmark CI
 
 ### ML / performance

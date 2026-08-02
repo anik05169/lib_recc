@@ -31,6 +31,7 @@ Status: ~~Fixed~~ | Open
 | Catalog search skeleton flicker | ~~Fixed~~ |
 | No delete confirmation | ~~Fixed~~ |
 | User name not in header | ~~Fixed~~ |
+| `pagination.total` not displayed | ~~Fixed~~ — CatalogView heading + pager |
 
 ---
 
@@ -62,7 +63,6 @@ Status: ~~Fixed~~ | Open
 | Limited a11y (partial `aria-live` only) | frontend | |
 | Admin endpoints have no UI (`POST /books`, `POST /train`) | — | API-only |
 | `Rating` schema unused | `schemas.py` | |
-| `pagination.total` not displayed | `CatalogView.jsx` | |
 | Google Fonts via CSS `@import` | `index.css` | |
 | `Rating.user_id: int` wrong type in schema | `schemas.py` | |
 

@@ -71,7 +71,12 @@ Interactive docs: `{BASE}/docs` (FastAPI Swagger)
 | POST | `/user/add-custom-book` | JWT | `Book` JSON | `{ message, book_id }` |
 | DELETE | `/user/library/{book_id}` | JWT | — | `{ message }` |
 | GET | `/user/library/ids` | JWT | — | `number[]` |
-| GET | `/user/recommend/{book_id}` | JWT | — | `Book[]` |
+| GET | `/user/recommend/{book_id}` | JWT | — | `{ catalog: Book[], library: Book[] }` |
+
+**`GET /user/recommend/{book_id}` notes:**
+- `catalog` — global similar books from Pinecone, **excluding** books already in the user's library (up to 5). For custom books not in the catalog index, the API falls back to the user-namespace vector or encodes title+description on the fly.
+- `library` — similar books within the user's personal library
+- Frontend shows catalog as **Similar books**; shows **Also in your library** only when `library.length >= 2`
 
 **Frontend callers:**
 - `App.jsx` → all except `/user/library/ids`

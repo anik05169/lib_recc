@@ -4,6 +4,8 @@
 
 Entry: `frontend/src/main.jsx` → `ErrorBoundary` → `App.jsx`
 
+**Look:** Warm charcoal UI (`index.css` / `App.css`) with Fraunces (display) + Figtree (body), teal accent. Auth uses a brand-first split layout (`Login.css`).
+
 ---
 
 ## Component tree

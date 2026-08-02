@@ -46,6 +46,24 @@ def recommend(book_id: int, top_n: int = 5, ratings_map: dict = None):
     return vector_recommender.recommend(book_id, top_n=top_n, ratings_map=ratings_map)
 
 
+def recommend_catalog_for_library_book(
+    book_id: int,
+    seed_book: dict = None,
+    user_id: str = None,
+    top_n: int = 5,
+    ratings_map: dict = None,
+    exclude_ids=None,
+):
+    return vector_recommender.recommend_catalog_for_library_book(
+        book_id,
+        seed_book=seed_book,
+        user_id=user_id,
+        top_n=top_n,
+        ratings_map=ratings_map,
+        exclude_ids=exclude_ids,
+    )
+
+
 def recommend_user(
     user_id: str,
     book_id: int,
