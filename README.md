@@ -108,6 +108,5 @@ lib_recc/
 - [x] Phase 3 — Tests, CI, MongoDB indexes
 - [x] Phase 4 — UX polish
 
-![CI](https://github.com/anik05169/lib_recc/actions/workflows/ci.yml/badge.svg)
 
 See [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) for remaining low-priority items.
